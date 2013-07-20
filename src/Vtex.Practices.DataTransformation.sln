@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vtex.Practices.DataTransformation", "Vtex.Practices.DataTransformation\Vtex.Practices.DataTransformation.csproj", "{A76A4323-5113-4C84-8014-BF0F22FFAB2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vtex.Practices.DataTransformation.Tests", "Vtex.Practices.DataTransformation.Tests\Vtex.Practices.DataTransformation.Tests.csproj", "{E3DA8A3A-2C6C-4CF6-ABBD-CBF8C31858BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vtex.Practices.DataTransformation.SampleWebApp", "Vtex.Practices.DataTransformation.SampleWebApp\Vtex.Practices.DataTransformation.SampleWebApp.csproj", "{C86E836B-604A-46A3-8BA7-497086E3F8DC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A76A4323-5113-4C84-8014-BF0F22FFAB2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A76A4323-5113-4C84-8014-BF0F22FFAB2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A76A4323-5113-4C84-8014-BF0F22FFAB2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A76A4323-5113-4C84-8014-BF0F22FFAB2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3DA8A3A-2C6C-4CF6-ABBD-CBF8C31858BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3DA8A3A-2C6C-4CF6-ABBD-CBF8C31858BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3DA8A3A-2C6C-4CF6-ABBD-CBF8C31858BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3DA8A3A-2C6C-4CF6-ABBD-CBF8C31858BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C86E836B-604A-46A3-8BA7-497086E3F8DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C86E836B-604A-46A3-8BA7-497086E3F8DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C86E836B-604A-46A3-8BA7-497086E3F8DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C86E836B-604A-46A3-8BA7-497086E3F8DC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
