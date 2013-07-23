@@ -182,7 +182,7 @@ namespace Vtex.Practices.DataTransformation
                         {
                             var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
 
-                            var cell = column.CellType == CellType.Unknown ? row.CreateCell(column.Index) : row.CreateCell(column.Index, column.CellType);
+                            var cell = column.CellType == CellType.Unknown ? row.CreateCell(column.Index) : row.CreateCell(column.Index, column.CellType.GetValueOrDefault(CellType.Unknown));
 
                             SetCellValue(column, cell, cellValue);
                         });

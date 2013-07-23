@@ -20,18 +20,36 @@ namespace Vtex.Practices.DataTransformation
             Columns = new List<Column>();
         }
 
+        public IColumnMapper<T> MapColumn(Column column)
+        {
+            if (string.IsNullOrWhiteSpace(column.HeaderText))
+                column.HeaderText = column.PropertyName;
+
+            MapColumn(column.Index, column.PropertyName, column.HeaderText, column.CellType.GetValueOrDefault(CellType.Unknown), column.CustomTransformAction);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Will add or overwrite column at given index
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="headerText"></param>
+        /// <param name="cellType"></param>
+        /// <param name="customTranformationAction"></param>
+        /// <returns></returns>
         public IColumnMapper<T> MapColumn(int index, string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction)
         {
-
             var newColumn = new Column
-                {
-                    Index = index,
-                    PropertyName = propertyName,
-                    HeaderText = headerText,
-                    CellType = cellType,
-                    Type = GetType(propertyName),
-                    CustomTransformAction = customTranformationAction
-                };
+                   {
+                       Index = index,
+                       PropertyName = propertyName,
+                       HeaderText = headerText,
+                       CellType = cellType,
+                       Type = GetType(propertyName),
+                       CustomTransformAction = customTranformationAction
+                   };
             if (Columns.Count > index && Columns[index] != null)
                 Columns[index] = newColumn;
             else
@@ -42,7 +60,24 @@ namespace Vtex.Practices.DataTransformation
 
         public IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction)
         {
-            return MapColumn(Columns.Count, propertyName, headerText, cellType, customTranformationAction);
+            return MapColumn(GetColumnIndex(propertyName), propertyName, headerText, cellType, customTranformationAction);
+        }
+
+        public IColumnMapper<T> MapColumn(string propertyName, Func<object, object> customTranformationAction)
+        {
+            MapColumn(new Column
+                {
+                    Index = GetColumnIndex(propertyName),
+                    CustomTransformAction = customTranformationAction
+                });
+            return this;
+        }
+
+        private int GetColumnIndex(string propertyName)
+        {
+            var existingColumn = Columns.FirstOrDefault(c => c.PropertyName.Equals(propertyName));
+
+            return existingColumn == null ? Columns.Count : existingColumn.Index;
         }
 
         public IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType)
@@ -70,7 +105,7 @@ namespace Vtex.Practices.DataTransformation
             return typeof(T).GetProperty(propertyName).PropertyType;
         }
 
-        public void AutoMapColumns()
+        public IColumnMapper<T> AutoMapColumns()
         {
             var index = -1;
 
@@ -87,6 +122,8 @@ namespace Vtex.Practices.DataTransformation
                         Type = property.PropertyType
                     };
             }).ToList());
+
+            return this;
         }
 
         private CellType GetCellType(Type propertyType)

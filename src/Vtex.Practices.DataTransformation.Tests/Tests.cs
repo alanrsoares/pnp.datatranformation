@@ -103,6 +103,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             var columnMapper = new ColumnMapper<DummyDto>();
 
             columnMapper
+                .AutoMapColumns()
                 .MapColumn("Id", "Id", CellType.NUMERIC)
                 .MapColumn("Name", "NewName", CellType.STRING, value => value.ToString().ToUpper())
                 .MapColumn("BirthDate")
@@ -159,7 +160,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         private static string GetRamdomName()
         {
             return string.Format("{0} {1}",
-                            new[] { "John", "Jack", "Juca", "Chico", "Zé" }[GetRandom()],
+                            new[] { "João", "Jack", "Juca", "Chico", "Zé" }[GetRandom()],
                             new[] { "Doe", "Ellis", "The Ripper", "Roberto", "Johnson" }[GetRandom()]);
         }
 
@@ -167,7 +168,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var newGuid = Guid.NewGuid();
             var guidNumber = Regex.Replace(newGuid.ToString(), @"[^\d]", "");
-            var rnd0 = new Random(Convert.ToInt32(guidNumber.Substring(0, 8)));
+            var rnd0 = new Random(Convert.ToInt32(guidNumber.Substring(0, 9)));
             var rnd = new Random(rnd0.Next(5000));
             return rnd;
         }
@@ -182,7 +183,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             return randomDateTime;
         }
 
-        private static int GetRandom(int min = 0, int max = 4)
+        private static int GetRandom(int min = 0, int max = 5)
         {
             var rnd = GetRandomizer();
             return rnd.Next(min, max);
