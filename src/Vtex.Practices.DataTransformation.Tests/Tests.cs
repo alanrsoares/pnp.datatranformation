@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
 using Newtonsoft.Json;
+using Vtex.Practices.DataTransformation.xls;
 
 namespace Vtex.Practices.DataTransformation.Tests
 {
@@ -98,21 +99,13 @@ namespace Vtex.Practices.DataTransformation.Tests
             return columnMapper;
         }
 
-        private static ColumnMapper<DummyDto> ManualMapper()
+        private static IColumnMapper<DummyDto> ManualMapper()
         {
-            var columnMapper = new ColumnMapper<DummyDto>();
-
-            columnMapper
+            return ColumnMapper<DummyDto>.Factory
+                .CreateNew()
                 .AutoMapColumns()
-                .MapColumn("Id", "Id", CellType.NUMERIC)
                 .MapColumn("Name", "NewName", CellType.STRING, value => value.ToString().ToUpper())
-                .MapColumn("BirthDate")
-                .MapColumn("NullableIntegerValue", CellType.NUMERIC)
-                .MapColumn("NullableDateTimeValue")
-                .MapColumn(1, "Name", "Overloaded Column Name", CellType.STRING, value => value.ToString().Replace(',', '-'))
-                .MapColumn("Salary");
-
-            return columnMapper;
+                .MapColumn(1, value => value.ToString().Replace(',', '-'));
         }
 
         public List<DummyDto> Data

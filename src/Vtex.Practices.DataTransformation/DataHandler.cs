@@ -12,11 +12,11 @@ namespace Vtex.Practices.DataTransformation
 {
     public class DataHandler<T> where T : new()
     {
-        private readonly ColumnMapper<T> _mapper;
+        private readonly IColumnMapper<T> _mapper;
 
         public HSSFWorkbook Workbook { get; private set; }
 
-        public DataHandler(ColumnMapper<T> columnMapper)
+        public DataHandler(IColumnMapper<T> columnMapper)
         {
             _mapper = columnMapper;
         }

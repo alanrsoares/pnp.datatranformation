@@ -1,14 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using NPOI.SS.UserModel;
 
 namespace Vtex.Practices.DataTransformation.xls
 {
     public interface IColumnMapper<T>
     {
+        List<Column> Columns { get; }
         IColumnMapper<T> AutoMapColumns();
         IColumnMapper<T> MapColumn(Column column);
         IColumnMapper<T> MapColumn(int index, string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction);
         IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction);
+        IColumnMapper<T> MapColumn(int index, Func<object, object> customTranformationAction);
         IColumnMapper<T> MapColumn(string propertyName, Func<object, object> customTranformationAction);
         IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType);
         IColumnMapper<T> MapColumn(string propertyName, string headerText);
