@@ -62,6 +62,8 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="DummyDto.cs" />
+    <Compile Include="DummyDtoFactory.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

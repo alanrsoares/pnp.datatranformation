@@ -148,6 +148,7 @@ namespace Vtex.Practices.DataTransformation
         private CellType GetCellType(string propertyName)
         {
             var property = _properties.FirstOrDefault(p => p.Name == propertyName);
+
             if (property == null)
                 throw new IndexOutOfRangeException(
                     string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName));
@@ -161,6 +162,15 @@ namespace Vtex.Practices.DataTransformation
         public ColumnMapper<T> CreateNew()
         {
             return new ColumnMapper<T>();
+        }
+
+        public ColumnMapper<T> CreateNew(bool autoMap)
+        {
+            var mapper = CreateNew();
+
+            if (autoMap) mapper.AutoMapColumns();
+
+            return mapper;
         }
     }
 }
