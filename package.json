@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "preinstall": "npm install -g jake && npm install -g coffee-script"
+    },
+    "dependencies": {
+        "shelljs": "~0.1.4"
+    }
+}
