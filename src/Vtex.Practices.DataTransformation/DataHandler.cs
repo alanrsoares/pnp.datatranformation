@@ -131,7 +131,7 @@ namespace Vtex.Practices.DataTransformation
                     property.SetValue(dto, (Int32)cell.NumericCellValue);
                     break;
                 default:
-                    property.SetValue(dto, cell.ToString());
+                    property.SetValue(dto, (cell == null ? string.Empty : cell.ToString()));
                     break;
             }
         }
