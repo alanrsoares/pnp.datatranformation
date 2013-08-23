@@ -11,5 +11,15 @@ namespace Vtex.Practices.DataTransformation.xls
         public CellType? CellType { get; set; }
         public string HeaderText { get; set; }
         public Func<object, object> CustomTransformAction { get; set; }
+
+        public Type UnderLyingType 
+        {
+            get { return Nullable.GetUnderlyingType(this.Type); }
+        }
+
+        public bool IsNullable 
+        {
+            get { return UnderLyingType != null; }
+        }
     }
 }

@@ -29,6 +29,8 @@ namespace Vtex.Practices.DataTransformation
 
             CreateAndPopulateHeader(sheet);
 
+            SetColumnDefaults(sheet);
+
             CreateAndPopulateRows(sheet, data);
 
             _mapper.Columns.ForEach(c => sheet.AutoSizeColumn(c.Index));
@@ -167,8 +169,40 @@ namespace Vtex.Practices.DataTransformation
         {
             var header = sheet.CreateRow(0);
             _mapper.Columns.ForEach(column =>
-                                    header.CreateCell(column.Index)
+                                    header.CreateCell(column.Index, CellType.STRING)
                                           .SetCellValue(column.HeaderText));
+        }
+
+        private void SetColumnDefaults(ISheet sheet)
+        {
+            var creationHelper = Workbook.GetCreationHelper();
+
+            _mapper.Columns.ForEach(c =>
+            {
+                var cellStyle = Workbook.CreateCellStyle();
+                cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
+                sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
+
+                var cellType = c.IsNullable ? c.UnderLyingType : c.Type;
+
+                switch (cellType.Name.ToUpper())
+                {
+                    case "DATETIME":
+                        {
+                            cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("dd/mm/yyyy");
+                            sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                        }
+                        break;
+                    case "STRING":
+                        {
+                            cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
+                            sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                        }
+                        break;
+                }
+
+            });
         }
 
         private void CreateAndPopulateRows(ISheet sheet, IEnumerable<T> dataSet)
@@ -182,7 +216,9 @@ namespace Vtex.Practices.DataTransformation
                         {
                             var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
 
-                            var cell = column.CellType == CellType.Unknown ? row.CreateCell(column.Index) : row.CreateCell(column.Index, column.CellType.GetValueOrDefault(CellType.Unknown));
+                            var cell = column.CellType == CellType.Unknown
+                                ? row.CreateCell(column.Index)
+                                : row.CreateCell(column.Index, column.CellType.GetValueOrDefault(CellType.Unknown));
 
                             SetCellValue(column, cell, cellValue);
                         });
@@ -193,16 +229,9 @@ namespace Vtex.Practices.DataTransformation
 
         private void SetCellValue(Column column, ICell cell, object cellValue)
         {
-            var dateCellStyle = Workbook.CreateCellStyle();
-            var creationHelper = Workbook.GetCreationHelper();
-
-            dateCellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("dd/mm/yyyy");
-
-            var underlyingType = Nullable.GetUnderlyingType(column.Type);
-
             var columnType = column.Type;
 
-            if (underlyingType != null)
+            if (column.IsNullable)
             {
                 if (cellValue == null)
                 {
@@ -211,7 +240,7 @@ namespace Vtex.Practices.DataTransformation
                     return;
                 }
 
-                columnType = underlyingType;
+                columnType = column.UnderLyingType;
             }
 
             if (column.CustomTransformAction != null)
@@ -223,7 +252,6 @@ namespace Vtex.Practices.DataTransformation
             {
                 case "DateTime":
                     cell.SetCellValue((DateTime)cellValue);
-                    cell.CellStyle = dateCellStyle;
                     break;
                 case "Single":
                     cell.SetCellValue(cellValue.ToString() == "0" ? 0.0 : Convert.ToSingle(cellValue));
