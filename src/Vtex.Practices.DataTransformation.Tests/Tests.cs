@@ -3,7 +3,6 @@ using System.Linq;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
 using Newtonsoft.Json;
-using Vtex.Practices.DataTransformation.xls;
 
 namespace Vtex.Practices.DataTransformation.Tests
 {
@@ -13,19 +12,24 @@ namespace Vtex.Practices.DataTransformation.Tests
         [Test]
         public void TestAutoMapper()
         {
-            var columnMapper = new ColumnMapper<DummyDto>();
+            var columnMapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            columnMapper.AutoMapColumns();
+            var properties = typeof(DummyDto).GetProperties();
 
-            Assert.AreEqual(6, columnMapper.Columns.Count);
+            Assert.AreEqual(properties.Count(), columnMapper.Columns.Count);
         }
 
         [Test]
         public void TestManualMapper()
         {
-            var columnMapper = ManualMapper();
+            var columnMapper = ColumnMapper<DummyDto>.Factory
+                                .CreateNew(true)
+                                .MapColumn("Name", "NewName1", CellType.STRING, value => value.ToString().ToUpper())
+                                .MapColumn(1, value => value.ToString().Replace(',', '-'));
 
-            Assert.AreEqual(6, columnMapper.Columns.Count);
+            var properties = typeof(DummyDto).GetProperties();
+
+            Assert.AreEqual(properties.Count(), columnMapper.Columns.Count);
         }
 
         [Test]
@@ -33,9 +37,11 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            var handler = new DataHandler<DummyDto>(columnMapper);
+            var handler = columnMapper.DataHandler;
 
-            var workBook = handler.EncodeDataToWorkbook(Data);
+            var generatedData = GenerateData();
+
+            var workBook = handler.EncodeDataToWorkbook(generatedData);
 
             Assert.DoesNotThrow(() => handler.WriteToFile(@"C:\Temp\TestAutomap.xls", workBook));
         }
@@ -43,10 +49,15 @@ namespace Vtex.Practices.DataTransformation.Tests
         [Test]
         public void TestXlsCreationFromDtoCollection_ManualMap()
         {
-            var columnMapper = ManualMapper();
+            var columnMapper = ColumnMapper<DummyDto>.Factory
+                                .CreateNew(true)
+                                .MapColumn("Name", "NewName2", CellType.STRING, value => value.ToString().ToUpper())
+                                .MapColumn(1, value => value.ToString().Replace(',', '-'))
+                                .MapColumn(0, "NewColumnName");
 
-            var handler = new DataHandler<DummyDto>(columnMapper);
-            var workBook = handler.EncodeDataToWorkbook(Data);
+            var handler = columnMapper.DataHandler;
+            var generatedData = GenerateData();
+            var workBook = handler.EncodeDataToWorkbook(generatedData);
 
             Assert.DoesNotThrow(() => handler.WriteToFile(@"C:\Temp\TestManualmap.xls", workBook));
         }
@@ -56,9 +67,9 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             const string filePath = @"C:\Temp\TestAutomap.xls";
 
-            var mapper = AutoMapper();
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            var handler = new DataHandler<DummyDto>(mapper);
+            var handler = mapper.DataHandler;
 
             var result = handler.DecodeFileToDtoCollection(filePath);
 
@@ -71,8 +82,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             const string filePath = @"C:\Temp\planilha_productEspec.xls";
 
             var mapper = ColumnMapper<ProductsSpecificationByCategoryIdDto>.Factory
-                    .CreateNew()
-                    .AutoMapColumns()
+                    .CreateNew(true)
                     .MapColumn("ProductId", "IdProduto (não alterável)")
                     .MapColumn("ProductName", "NomeProduto (não alterável)")
                     .MapColumn("FieldId", "IdCampo (não alterável)")
@@ -96,11 +106,11 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             const string filePath = @"C:\Temp\end2endtest.xls";
 
-            var mapper = AutoMapper();
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            var handler = new DataHandler<DummyDto>(mapper);
+            var handler = mapper.DataHandler;
 
-            var expectedData = Data;
+            var expectedData = GenerateData();
 
             var workBook = handler.EncodeDataToWorkbook(expectedData);
 
@@ -115,30 +125,9 @@ namespace Vtex.Practices.DataTransformation.Tests
             Assert.AreEqual(serializedResult, serializedData);
         }
 
-        private static ColumnMapper<DummyDto> AutoMapper()
+        public List<DummyDto> GenerateData()
         {
-            var columnMapper = new ColumnMapper<DummyDto>();
-
-            columnMapper.AutoMapColumns();
-
-            return columnMapper;
-        }
-
-        private static IColumnMapper<DummyDto> ManualMapper()
-        {
-            return ColumnMapper<DummyDto>.Factory
-                .CreateNew()
-                .AutoMapColumns()
-                .MapColumn("Name", "NewName", CellType.STRING, value => value.ToString().ToUpper())
-                .MapColumn(1, value => value.ToString().Replace(',', '-'));
-        }
-
-        public List<DummyDto> Data
-        {
-            get
-            {
-                return DummyDtoFactory.NewDummyDtos(100).ToList();
-            }
+            return DummyDtoFactory.NewDummyDtos(100).ToList();
         }
 
     }

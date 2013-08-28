@@ -6,7 +6,7 @@ using System.Reflection;
 using NPOI.HPSF;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
-using Vtex.Practices.DataTransformation.xls;
+using Vtex.Practices.DataTransformation.ServiceModel;
 
 namespace Vtex.Practices.DataTransformation
 {
@@ -227,7 +227,7 @@ namespace Vtex.Practices.DataTransformation
                 });
         }
 
-        private void SetCellValue(Column column, ICell cell, object cellValue)
+        private static void SetCellValue(Column column, ICell cell, object cellValue)
         {
             var columnType = column.Type;
 
@@ -270,5 +270,13 @@ namespace Vtex.Practices.DataTransformation
 
         }
 
+    }
+
+    public static class DataHandlerFactory
+    {
+        public static DataHandler<T> NewFromColumnMapper<T>(IColumnMapper<T> mapper) where T : new()
+        {
+            return new DataHandler<T>(mapper);
+        }
     }
 }

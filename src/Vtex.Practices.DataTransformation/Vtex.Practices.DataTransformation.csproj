@@ -48,12 +48,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ColumnMapperFactory.cs" />
+    <Compile Include="DataFormatter.cs" />
     <Compile Include="DataHandler.cs" />
     <Compile Include="ColumnMapper.cs" />
-    <Compile Include="xls\Column.cs" />
-    <Compile Include="xls\IColumnMapper.cs" />
-    <Compile Include="xls\XlsHelper.cs" />
+    <Compile Include="Exceptions\InvalidPropertyException.cs" />
+    <Compile Include="ExportHelper.cs" />
+    <Compile Include="Extensions\DataHandlerExtensions.cs" />
+    <Compile Include="IFormatData.cs" />
+    <Compile Include="IColumnMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServiceModel\Column.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

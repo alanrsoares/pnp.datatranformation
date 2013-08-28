@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using NPOI.SS.UserModel;
 
-namespace Vtex.Practices.DataTransformation.xls
+namespace Vtex.Practices.DataTransformation.ServiceModel
 {
     public class Column
     {

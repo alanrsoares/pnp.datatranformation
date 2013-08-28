@@ -3,15 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NPOI.SS.UserModel;
-using Vtex.Practices.DataTransformation.xls;
+using Vtex.Practices.DataTransformation.Exceptions;
+using Vtex.Practices.DataTransformation.ServiceModel;
 
 namespace Vtex.Practices.DataTransformation
 {
-    public class ColumnMapper<T> : IColumnMapper<T>
+    public class ColumnMapper<T> : IColumnMapper<T> where T : new()
     {
         private readonly List<PropertyInfo> _properties;
 
         public List<Column> Columns { get; private set; }
+
+        public DataHandler<T> DataHandler
+        {
+            get
+            {
+                return DataHandlerFactory.NewFromColumnMapper(this);
+            }
+        }
 
         public static ColumnMapperFactory<T> Factory
         {
@@ -84,9 +93,22 @@ namespace Vtex.Practices.DataTransformation
                              customTranformationAction);
         }
 
+        public IColumnMapper<T> MapColumn(int index, string headerText)
+        {
+            var existingColumn = Columns[index];
+
+            return MapColumn(index,
+                             existingColumn.PropertyName,
+                             headerText,
+                             existingColumn.CellType.GetValueOrDefault(CellType.Unknown),
+                             existingColumn.CustomTransformAction);
+        }
+
         public IColumnMapper<T> MapColumn(string propertyName, Func<object, object> customTranformationAction)
         {
-            return MapColumn(GetColumnIndex(propertyName), propertyName, propertyName, GetCellType(propertyName),
+            return MapColumn(GetColumnIndex(propertyName),
+                             propertyName, propertyName,
+                             GetCellType(propertyName),
                              customTranformationAction);
         }
 
@@ -113,14 +135,18 @@ namespace Vtex.Practices.DataTransformation
         public IColumnMapper<T> AutoMapColumns()
         {
             _properties.ForEach(property =>
-                                MapColumn(property.Name, GetCellType(property.PropertyType)));
+                MapColumn(property.Name, GetCellType(property.PropertyType)));
 
             return this;
         }
 
         private static Type GetType(string propertyName)
         {
-            return typeof(T).GetProperty(propertyName).PropertyType;
+            var property = typeof(T).GetProperty(propertyName);
+            if (property == null)
+                throw new InvalidPropertyException(string.Format("Structure {0} does not have given property: {1}", typeof(T).Name, propertyName));
+
+            return property.PropertyType;
         }
 
         private int GetColumnIndex(string propertyName)
@@ -154,23 +180,6 @@ namespace Vtex.Practices.DataTransformation
                     string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName));
 
             return GetCellType(property.PropertyType);
-        }
-    }
-
-    public class ColumnMapperFactory<T>
-    {
-        public ColumnMapper<T> CreateNew()
-        {
-            return new ColumnMapper<T>();
-        }
-
-        public ColumnMapper<T> CreateNew(bool autoMap)
-        {
-            var mapper = CreateNew();
-
-            if (autoMap) mapper.AutoMapColumns();
-
-            return mapper;
         }
     }
 }
