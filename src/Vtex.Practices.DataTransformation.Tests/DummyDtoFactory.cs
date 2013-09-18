@@ -55,7 +55,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var dtos = new List<DummyDto>();
 
-            while (dtos.Count < 50)
+            while (dtos.Count < amount)
             {
                 dtos.Add(NewDummyDto());
             }

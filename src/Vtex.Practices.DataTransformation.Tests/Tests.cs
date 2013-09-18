@@ -76,30 +76,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             Assert.IsNotNull(result);
         }
 
-        [Test]
-        public void ImportCustomFile()
-        {
-            const string filePath = @"C:\Temp\planilha_productEspec.xls";
-
-            var mapper = ColumnMapper<ProductsSpecificationByCategoryIdDto>.Factory
-                    .CreateNew(true)
-                    .MapColumn("ProductId", "IdProduto (não alterável)")
-                    .MapColumn("ProductName", "NomeProduto (não alterável)")
-                    .MapColumn("FieldId", "IdCampo (não alterável)")
-                    .MapColumn("FieldName", "NomeCampo (não alterável)")
-                    .MapColumn("FieldTypeName", "NomeTipoCampo (não alterável)")
-                    .MapColumn("FieldValueId", "IdCampoValor (não alterável)")
-                    .MapColumn("FieldValueName", "NomeCampoValor (não alterável)")
-                    .MapColumn("ProductFieldValueId", "CodigoEspecificaCao (não alterável)")
-                    .MapColumn("ProductFieldValueText", "ValorEspecificaCao")
-                    .MapColumn("ProductRefId", "CodigoReferencia (não alterável)");
-
-            var handler = new DataHandler<ProductsSpecificationByCategoryIdDto>(mapper);
-
-            var result = handler.DecodeFileToDtoCollection(filePath);
-
-            Assert.IsNotNull(result);
-        }
+        
 
         [Test]
         public void EndToEndTest()
