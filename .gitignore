@@ -182,3 +182,4 @@ _NCrunch_*
 test-output/
 node_modules/
 
+*.DotSettings

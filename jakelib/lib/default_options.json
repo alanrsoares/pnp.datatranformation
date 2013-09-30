@@ -1,0 +1,10 @@
+{
+    "git": {
+        "tagPrefix": "",
+        "allowInBumpCommit": []
+    },
+    "nUnit": {
+    	"outputFile": "test-output/outputDefault.xml"
+    },
+    "backupOldPackages": "false"
+}
