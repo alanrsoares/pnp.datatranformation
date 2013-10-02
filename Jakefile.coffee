@@ -20,6 +20,8 @@ global.projects =
     main:
         name: 'Vtex.Practices.Datatransformation'
         id: 'VTEXPractices.Datatransformation'
+        allowInBumpCommit: true
+
 
 # Define caminhos para Nuspec e Assembly Info de cada projeto
 for key, project of global.projects
