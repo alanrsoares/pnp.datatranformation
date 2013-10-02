@@ -14,7 +14,7 @@ namespace Vtex.Practices.DataTransformation.ServiceModel
 
         public Type UnderLyingType 
         {
-            get { return Nullable.GetUnderlyingType(this.Type); }
+            get { return Nullable.GetUnderlyingType(Type); }
         }
 
         public bool IsNullable 

@@ -127,7 +127,7 @@ namespace Vtex.Practices.DataTransformation.Tests
 
         public List<DummyDto> GenerateData()
         {
-            return DummyDtoFactory.NewDummyDtos(100).ToList();
+            return DummyDtoFactory.GenerateData(100).ToList();
         }
 
     }

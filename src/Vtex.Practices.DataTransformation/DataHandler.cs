@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -100,11 +102,9 @@ namespace Vtex.Practices.DataTransformation
 
             var cell = row.GetCell(column.Index);
 
-            var underlyingType = Nullable.GetUnderlyingType(column.Type);
-
             var columnType = column.Type;
 
-            if (underlyingType != null)
+            if (column.IsNullable)
             {
                 if (cell == null || cell.CellType == CellType.BLANK)
                 {
@@ -112,7 +112,47 @@ namespace Vtex.Practices.DataTransformation
                     return;
                 }
 
-                columnType = underlyingType;
+                columnType = column.UnderLyingType;
+            }
+
+            if (columnType.IsArray || columnType.GetGenericArguments().Any())
+            {
+                var innerType = columnType.GetElementType() ?? columnType.GetGenericArguments()[0];
+
+                var splittedValues = cell.ToString().Split(';')
+                                                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                                                    .Select(value => value.Trim())
+                                                    .ToList();
+
+                if (!splittedValues.Any() || cell.CellType == CellType.BLANK)
+                {
+                    property.SetValue(dto, null);
+                    return;
+                }
+
+                switch (innerType.Name)
+                {
+                    case "Double":
+                        property.SetValue(dto, cell.NumericCellValue);
+                        break;
+                    case "Single":
+                        var floats = splittedValues.Select(float.Parse);
+                        property.SetValue(dto, floats.ToArray());
+                        break;
+                    case "Decimal":
+                        var decimals = splittedValues.Select(decimal.Parse);
+                        property.SetValue(dto, decimals.ToArray());
+                        break;
+                    case "Int32":
+                        var ints = splittedValues.Select(int.Parse);
+                        property.SetValue(dto, ints.ToArray());
+                        break;
+                    default:
+                        property.SetValue(dto, splittedValues.ToArray());
+                        break;
+                }
+
+                return;
             }
 
             switch (columnType.Name)
@@ -142,12 +182,12 @@ namespace Vtex.Practices.DataTransformation
         {
             var workbook = new HSSFWorkbook();
 
-            ////create a entry of DocumentSummaryInformation
+            //create a entry of DocumentSummaryInformation
             var dsi = PropertySetFactory.CreateDocumentSummaryInformation();
 
             workbook.DocumentSummaryInformation = dsi;
 
-            ////create a entry of SummaryInformation
+            //create a entry of SummaryInformation
             var si = PropertySetFactory.CreateSummaryInformation();
 
             si.Subject = "Default Subject";
@@ -243,6 +283,13 @@ namespace Vtex.Practices.DataTransformation
                 columnType = column.UnderLyingType;
             }
 
+            if (columnType.Name != "String" && cellValue is IEnumerable)
+            {
+                var values = (cellValue as IEnumerable).Cast<object>();
+
+                cellValue = string.Join(";", values.Select(value => value.ToString()));
+            }
+
             if (column.CustomTransformAction != null)
             {
                 cellValue = column.CustomTransformAction(cellValue);
@@ -264,7 +311,7 @@ namespace Vtex.Practices.DataTransformation
                     cell.SetCellValue((int)cellValue);
                     break;
                 default:
-                    cell.SetCellValue(cellValue.ToString());
+                    cell.SetCellValue(cellValue == null ? string.Empty : cellValue.ToString());
                     break;
             }
 

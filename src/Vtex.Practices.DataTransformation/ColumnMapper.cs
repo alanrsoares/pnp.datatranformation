@@ -156,9 +156,21 @@ namespace Vtex.Practices.DataTransformation
             return existingColumn == null ? Columns.Count : existingColumn.Index;
         }
 
-        private CellType GetCellType(Type propertyType)
+        private static CellType GetCellType(Type propertyType)
         {
-            switch (propertyType.Name)
+            var propertyTypeName = propertyType.Name;
+
+            if (propertyTypeName.Contains("Nullable`1"))
+            {
+                propertyTypeName = Nullable.GetUnderlyingType(propertyType).Name;
+            }
+
+            if (propertyType.IsGenericType || propertyType.IsArray)
+            {
+                return CellType.STRING;
+            }
+
+            switch (propertyTypeName)
             {
                 case "String":
                     return CellType.STRING;
@@ -175,11 +187,11 @@ namespace Vtex.Practices.DataTransformation
         {
             var property = _properties.FirstOrDefault(p => p.Name == propertyName);
 
-            if (property == null)
-                throw new IndexOutOfRangeException(
-                    string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName));
+            if (property != null) return GetCellType(property.PropertyType);
 
-            return GetCellType(property.PropertyType);
+            var message = string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName);
+
+            throw new IndexOutOfRangeException(message);
         }
     }
 }

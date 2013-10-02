@@ -16,6 +16,8 @@ namespace Vtex.Practices.DataTransformation.Tests
                     Salary = new decimal(GetRandom(4000, 10000) + (GetRandom(1, 100) * .01)),
                     NullableIntegerValue = new int?[] { GetRandom(), null, null }[GetRandom(0, 2)],
                     NullableDateTimeValue = new DateTime?[] { GetRandomDateTime(), null, null }[GetRandom(0, 2)],
+                    IenumerableOfInts = new[] { 1, 2, 3, 4, 5 },
+                    IenumerableOfStrings = new[] { "ab", "cd", "ef" }
                 };
         }
 
@@ -51,7 +53,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             return rnd.Next(min, max);
         }
 
-        public static IEnumerable<DummyDto> NewDummyDtos(int amount)
+        public static IEnumerable<DummyDto> GenerateData(int amount)
         {
             var dtos = new List<DummyDto>();
 
