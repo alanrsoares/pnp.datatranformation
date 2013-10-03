@@ -129,7 +129,7 @@ namespace Vtex.Practices.DataTransformation
 
         public IColumnMapper<T> MapColumn(string propertyName)
         {
-            return MapColumn(propertyName, CellType.Unknown);
+            return MapColumn(propertyName, GetCellType(propertyName));
         }
 
         public IColumnMapper<T> AutoMapColumns()
@@ -143,6 +143,7 @@ namespace Vtex.Practices.DataTransformation
         private static Type GetType(string propertyName)
         {
             var property = typeof(T).GetProperty(propertyName);
+
             if (property == null)
                 throw new InvalidPropertyException(string.Format("Structure {0} does not have given property: {1}", typeof(T).Name, propertyName));
 
@@ -160,9 +161,11 @@ namespace Vtex.Practices.DataTransformation
         {
             var propertyTypeName = propertyType.Name;
 
-            if (propertyTypeName.Contains("Nullable`1"))
+            var underLyingType = Nullable.GetUnderlyingType(propertyType);
+
+            if (underLyingType != null)
             {
-                propertyTypeName = Nullable.GetUnderlyingType(propertyType).Name;
+                propertyTypeName = underLyingType.Name;
             }
 
             if (propertyType.IsGenericType || propertyType.IsArray)
@@ -187,11 +190,12 @@ namespace Vtex.Practices.DataTransformation
         {
             var property = _properties.FirstOrDefault(p => p.Name == propertyName);
 
-            if (property != null) return GetCellType(property.PropertyType);
+            if (property != null)
+                return GetCellType(property.PropertyType);
 
             var message = string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName);
 
-            throw new IndexOutOfRangeException(message);
+            throw new InvalidPropertyException(message);
         }
     }
 }

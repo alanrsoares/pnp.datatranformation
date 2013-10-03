@@ -12,14 +12,34 @@ namespace Vtex.Practices.DataTransformation.ServiceModel
         public string HeaderText { get; set; }
         public Func<object, object> CustomTransformAction { get; set; }
 
-        public Type UnderLyingType 
+        public Type UnderLyingType
         {
-            get { return Nullable.GetUnderlyingType(Type); }
+            get
+            {
+                return Nullable.GetUnderlyingType(Type);
+            }
         }
 
-        public bool IsNullable 
+        public bool IsNullable
         {
-            get { return UnderLyingType != null; }
+            get
+            {
+                return UnderLyingType != null;
+            }
+        }
+
+        private string _listSeparator = ";";
+
+        public string ListSeparator
+        {
+            get
+            {
+                return _listSeparator;
+            }
+            set
+            {
+                _listSeparator = value;
+            }
         }
     }
 }

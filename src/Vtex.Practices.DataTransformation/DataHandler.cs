@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -133,7 +132,8 @@ namespace Vtex.Practices.DataTransformation
                 switch (innerType.Name)
                 {
                     case "Double":
-                        property.SetValue(dto, cell.NumericCellValue);
+                        var doubles = splittedValues.Select(double.Parse);
+                        property.SetValue(dto, doubles.ToArray());
                         break;
                     case "Single":
                         var floats = splittedValues.Select(float.Parse);
@@ -287,7 +287,7 @@ namespace Vtex.Practices.DataTransformation
             {
                 var values = (cellValue as IEnumerable).Cast<object>();
 
-                cellValue = string.Join(";", values.Select(value => value.ToString()));
+                cellValue = string.Join(column.ListSeparator, values.Select(value => value.ToString()));
             }
 
             if (column.CustomTransformAction != null)

@@ -3,6 +3,9 @@ using System.Linq;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
 using Newtonsoft.Json;
+using Vtex.Practices.DataTransformation.Exceptions;
+using Vtex.Practices.DataTransformation.Extensions;
+using Vtex.Practices.DataTransformation.ServiceModel;
 
 namespace Vtex.Practices.DataTransformation.Tests
 {
@@ -24,8 +27,9 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .MapColumn("Name", "NewName1", CellType.STRING, value => value.ToString().ToUpper())
-                                .MapColumn(1, value => value.ToString().Replace(',', '-'));
+                                .MapColumn("Name", "NewName1", CellType.STRING, ToUpperCase)
+                                .MapColumn("Name", ToUpperCase)
+                                .MapColumn(1, CommaToDashReplacer);
 
             var properties = typeof(DummyDto).GetProperties();
 
@@ -51,7 +55,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .MapColumn("Name", "NewName2", CellType.STRING, value => value.ToString().ToUpper())
+                                .MapColumn("Name", "NewName2", CellType.STRING, ToUpperCase)
                                 .MapColumn(1, value => value.ToString().Replace(',', '-'))
                                 .MapColumn(0, "NewColumnName");
 
@@ -63,7 +67,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void ImportFile()
+        public void ShouldImportFileTest()
         {
             const string filePath = @"C:\Temp\TestAutomap.xls";
 
@@ -77,7 +81,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void ImportCustomFile()
+        public void ShouldImportCustomFileTest()
         {
             const string filePath = @"C:\Temp\planilha_productEspec.xls";
 
@@ -102,7 +106,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void EndToEndTest()
+        public void ShouldPerformEndToEndTest()
         {
             const string filePath = @"C:\Temp\end2endtest.xls";
 
@@ -125,11 +129,160 @@ namespace Vtex.Practices.DataTransformation.Tests
             Assert.AreEqual(serializedResult, serializedData);
         }
 
-        public List<DummyDto> GenerateData()
+        [Test]
+        public void InvalidPropertyMappingTest()
         {
-            return DummyDtoFactory.GenerateData(100).ToList();
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+
+            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn("InvalidPropertyName"));
         }
 
+        [Test]
+        public void InvalidColumnMappingTest()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+
+            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn("InvalidPropertyName", ToUpperCase));
+        }
+
+        [Test]
+        public void ColumnMappingWithColumnObject()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+            var column = new Column
+            {
+                PropertyName = "IenumerableOfInts",
+                HeaderText = "Header Name",
+                ListSeparator = "-"
+            };
+
+            mapper.MapColumn(column);
+
+            Assert.AreEqual(1, mapper.Columns.Count);
+        }
+
+        [Test]
+        public void ColumnMappingWithColumnObjectWithoutHeaderText()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+            var column = new Column
+            {
+                PropertyName = "Name"
+            };
+
+            mapper.MapColumn(column);
+
+            Assert.AreEqual(column.PropertyName, mapper.Columns[0].HeaderText);
+        }
+
+        [Test]
+        public void ShouldEncodeXlsStreamTest()
+        {
+            var data = GenerateData();
+
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+
+            var handler = mapper.DataHandler;
+
+            var stream = handler.EncodeToXlsStream(data);
+
+            Assert.IsNotNull(stream);
+        }
+
+        [Test]
+        public void ShouldEncodeCsvStreamTest()
+        {
+            var data = GenerateData();
+
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+
+            var handler = mapper.DataHandler;
+
+            var stream = handler.EncodeToCsvStream(data);
+
+            Assert.IsNotNull(stream);
+        }
+
+        [Test]
+        public void ExportHelperXlsTest()
+        {
+            var data = GenerateData();
+            var xlsData = ExportHelper.Export(data).AsXls();
+            Assert.IsNotNull(xlsData);
+        }
+
+        [Test]
+        public void ExportHelperCsvTest()
+        {
+            var data = GenerateData();
+            var csvData = ExportHelper.Export(data, ColumnMapper<DummyDto>.Factory.CreateNew()).AsCsv();
+            Assert.IsNull(csvData);
+        }
+
+        [Test]
+        public void ParameterTypeInferenceAndCustomTransformTest()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+            mapper.MapColumn("Name", ToUpperCase);
+
+            var mappedColumn = mapper.Columns.FirstOrDefault();
+
+            Assert.IsNotNull(mappedColumn);
+            Assert.AreEqual(mappedColumn.PropertyName, mappedColumn.HeaderText);
+            Assert.AreEqual(CellType.STRING, mappedColumn.CellType);
+        }
+
+        [Test]
+        public void ParameterTypeInferenceTest()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+            mapper.MapColumn("Name");
+
+            var mappedColumn = mapper.Columns.FirstOrDefault();
+
+            Assert.IsNotNull(mappedColumn);
+            Assert.AreEqual("Name", mappedColumn.PropertyName);
+            Assert.AreEqual(mappedColumn.PropertyName, mappedColumn.HeaderText);
+            Assert.AreEqual(CellType.STRING, mappedColumn.CellType);
+        }
+
+        [Test]
+        public void InvalidColumnMappingWithComplexParameters()
+        {
+            //MapColumn(int index, string propertyName, string headerText, CellType cellType,
+            //                            Func<object, object> customTranformationAction)
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+
+            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn(1, "InvalidPropertyName", "", CellType.Unknown, null));
+        }
+
+        [Test]
+        public void ShouldPerformSelfTest()
+        {
+            const string input = "Hello";
+            var output = ToUpperCase(input);
+
+            const string input2 = "one,two";
+            var output2 = CommaToDashReplacer(input2);
+
+            Assert.AreEqual(input.ToUpper(), output);
+            Assert.AreEqual(input2.Replace(",", "-"), output2);
+        }
+
+        public List<DummyDto> GenerateData()
+        {
+            return DummyDtoFactory.GenerateData(500).ToList();
+        }
+
+        private static object ToUpperCase(object value)
+        {
+            return value.ToString().ToUpper();
+        }
+
+        private static object CommaToDashReplacer(object value)
+        {
+            return value.ToString().Replace(',', '-');
+        }
     }
 
     public class ProductsSpecificationByCategoryIdDto

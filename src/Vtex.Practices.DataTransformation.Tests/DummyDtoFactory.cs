@@ -19,7 +19,12 @@ namespace Vtex.Practices.DataTransformation.Tests
                     IenumerableOfInts = new[] { 1, 2, 3, 4, 5 },
                     ArrayOfInts = new[] { 1, 2, 3, 4, 5 },
                     IenumerableOfStrings = new[] { "ab", "cd", "ef" },
-                    ArrayOfStrings = new[] { "ab", "cd", "ef" }
+                    ArrayOfStrings = new[] { "ab", "cd", "ef" },
+                    IenumerableOfDoubles = new[] { 1.23, 2.34, 3.45, 4.56 },
+                    IenumerableOfFloats = new[] { 1.2F, 2.3F, 3.4F, 4.5F },
+                    IenumerableOfDecimals = new[] { new decimal(10.5), new decimal(20.5), new decimal(30.5) },
+                    DoubleValue = 123.04,
+                    SingleValue = 123.04F
                 };
         }
 
@@ -59,7 +64,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var dtos = new List<DummyDto>();
 
-            while (dtos.Count < 50)
+            while (dtos.Count < amount)
             {
                 dtos.Add(NewDummyDto());
             }
