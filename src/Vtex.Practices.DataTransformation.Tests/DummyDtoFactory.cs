@@ -17,7 +17,9 @@ namespace Vtex.Practices.DataTransformation.Tests
                     NullableIntegerValue = new int?[] { GetRandom(), null, null }[GetRandom(0, 2)],
                     NullableDateTimeValue = new DateTime?[] { GetRandomDateTime(), null, null }[GetRandom(0, 2)],
                     IenumerableOfInts = new[] { 1, 2, 3, 4, 5 },
-                    IenumerableOfStrings = new[] { "ab", "cd", "ef" }
+                    ArrayOfInts = new[] { 1, 2, 3, 4, 5 },
+                    IenumerableOfStrings = new[] { "ab", "cd", "ef" },
+                    ArrayOfStrings = new[] { "ab", "cd", "ef" }
                 };
         }
 
