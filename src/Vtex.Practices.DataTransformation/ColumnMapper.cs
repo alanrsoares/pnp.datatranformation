@@ -76,7 +76,7 @@ namespace Vtex.Practices.DataTransformation
                 throw new IndexOutOfRangeException(message);
             }
 
-            return this;
+            return ReArrangeColumns();
         }
 
         public IColumnMapper<T> Unmap(string propertyName)
@@ -85,7 +85,7 @@ namespace Vtex.Practices.DataTransformation
 
             if (column != null)
             {
-                Columns.Remove(column);
+                Unmap(Columns.IndexOf(column));
             }
             else
             {
@@ -96,6 +96,18 @@ namespace Vtex.Practices.DataTransformation
                 throw new InvalidPropertyException(message);
             }
 
+            return ReArrangeColumns();
+        }
+
+        private IColumnMapper<T> ReArrangeColumns()
+        {
+            var backup = Columns;
+            Columns.Clear();
+            Columns = backup.Select(column =>
+            {
+                column.Index = Columns.IndexOf(column);
+                return column;
+            }).ToList();
             return this;
         }
 
