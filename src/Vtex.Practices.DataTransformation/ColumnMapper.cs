@@ -34,16 +34,69 @@ namespace Vtex.Practices.DataTransformation
             Columns = new List<Column>();
         }
 
-        public IColumnMapper<T> MapColumn(Column column)
+        public IColumnMapper<T> Map(Column column)
         {
-            if (string.IsNullOrWhiteSpace(column.HeaderText))
-                column.HeaderText = column.PropertyName;
+            var headerText = column.HeaderText;
 
-            return MapColumn(column.Index,
-                             column.PropertyName,
-                             column.HeaderText,
-                             column.CellType.GetValueOrDefault(CellType.Unknown),
-                             column.CustomTransformAction);
+            var propertyName = column.PropertyName;
+
+            var index = column.Index;
+
+            var existingColumn = GetExistingColumn(index);
+
+            var newColumn = new Column
+            {
+                Index = index,
+                PropertyName = propertyName,
+                HeaderText = string.IsNullOrWhiteSpace(headerText) ? propertyName : headerText,
+                CellType = column.CellType ?? GetCellType(propertyName),
+                Type = GetType(propertyName),
+                CustomEncoder = column.CustomEncoder,
+                CustomDecoder = column.CustomDecoder,
+                ListSeparator = column.ListSeparator
+            };
+
+            if (existingColumn != null)
+                Columns[index.GetValueOrDefault()] = newColumn;
+            else
+                Columns.Add(newColumn);
+
+            return this;
+        }
+
+        public IColumnMapper<T> Unmap(int index)
+        {
+            if (GetExistingColumn(index) != null)
+            {
+                Columns.RemoveAt(index);
+            }
+            else
+            {
+                var message = string.Format("Invalid property index: {0}. No property found at given index.", index);
+                throw new IndexOutOfRangeException(message);
+            }
+
+            return this;
+        }
+
+        public IColumnMapper<T> Unmap(string propertyName)
+        {
+            var column = GetExistingColumn(propertyName);
+
+            if (column != null)
+            {
+                Columns.Remove(column);
+            }
+            else
+            {
+                var message = string.IsNullOrWhiteSpace(propertyName)
+                    ? "Argument \"prpertyName\" cannot have either null or empty value."
+                    : string.Format("You are trying to unmap an invalid property: \"{0}\".", propertyName);
+
+                throw new InvalidPropertyException(message);
+            }
+
+            return this;
         }
 
         /// <summary>
@@ -55,8 +108,7 @@ namespace Vtex.Practices.DataTransformation
         /// <param name="cellType"></param>
         /// <param name="customTranformationAction"></param>
         /// <returns></returns>
-        public IColumnMapper<T> MapColumn(int index, string propertyName, string headerText, CellType cellType,
-                                          Func<object, object> customTranformationAction)
+        public IColumnMapper<T> Map(int? index, string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction)
         {
             var newColumn = new Column
                 {
@@ -65,77 +117,77 @@ namespace Vtex.Practices.DataTransformation
                     HeaderText = headerText,
                     CellType = cellType,
                     Type = GetType(propertyName),
-                    CustomTransformAction = customTranformationAction
+                    CustomEncoder = customTranformationAction
                 };
 
-            if (Columns.Count > index && Columns[index] != null)
-                Columns[index] = newColumn;
+            if (index != null && Columns.Count > index && Columns[index.Value] != null)
+                Columns[index.Value] = newColumn;
             else
                 Columns.Add(newColumn);
 
             return this;
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType,
+        public IColumnMapper<T> Map(string propertyName, string headerText, CellType cellType,
                                           Func<object, object> customTranformationAction)
         {
-            return MapColumn(GetColumnIndex(propertyName), propertyName, headerText, cellType, customTranformationAction);
+            return Map(GetColumnIndex(propertyName), propertyName, headerText, cellType, customTranformationAction);
         }
 
-        public IColumnMapper<T> MapColumn(int index, Func<object, object> customTranformationAction)
+        public IColumnMapper<T> Map(int index, Func<object, object> customTranformationAction)
         {
             var existingColumn = Columns[index];
 
-            return MapColumn(existingColumn.Index,
+            return Map(existingColumn.Index,
                              existingColumn.PropertyName,
                              existingColumn.HeaderText,
                              existingColumn.CellType.GetValueOrDefault(CellType.Unknown),
                              customTranformationAction);
         }
 
-        public IColumnMapper<T> MapColumn(int index, string headerText)
+        public IColumnMapper<T> Map(int index, string headerText)
         {
             var existingColumn = Columns[index];
 
-            return MapColumn(index,
+            return Map(index,
                              existingColumn.PropertyName,
                              headerText,
                              existingColumn.CellType.GetValueOrDefault(CellType.Unknown),
-                             existingColumn.CustomTransformAction);
+                             existingColumn.CustomEncoder);
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName, Func<object, object> customTranformationAction)
+        public IColumnMapper<T> Map(string propertyName, Func<object, object> customTranformationAction)
         {
-            return MapColumn(GetColumnIndex(propertyName),
+            return Map(GetColumnIndex(propertyName),
                              propertyName, propertyName,
                              GetCellType(propertyName),
                              customTranformationAction);
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName, string headerText, CellType cellType)
+        public IColumnMapper<T> Map(string propertyName, string headerText, CellType cellType)
         {
-            return MapColumn(propertyName, headerText, cellType, null);
+            return Map(propertyName, headerText, cellType, null);
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName, string headerText)
+        public IColumnMapper<T> Map(string propertyName, string headerText)
         {
-            return MapColumn(propertyName, headerText, CellType.Unknown);
+            return Map(propertyName, headerText, CellType.Unknown);
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName, CellType cellType)
+        public IColumnMapper<T> Map(string propertyName, CellType cellType)
         {
-            return MapColumn(propertyName, propertyName, cellType);
+            return Map(propertyName, propertyName, cellType);
         }
 
-        public IColumnMapper<T> MapColumn(string propertyName)
+        public IColumnMapper<T> Map(string propertyName)
         {
-            return MapColumn(propertyName, GetCellType(propertyName));
+            return Map(propertyName, GetCellType(propertyName));
         }
 
         public IColumnMapper<T> AutoMapColumns()
         {
             _properties.ForEach(property =>
-                MapColumn(property.Name, GetCellType(property.PropertyType)));
+                Map(property.Name, GetCellType(property.PropertyType)));
 
             return this;
         }
@@ -150,7 +202,7 @@ namespace Vtex.Practices.DataTransformation
             return property.PropertyType;
         }
 
-        private int GetColumnIndex(string propertyName)
+        private int? GetColumnIndex(string propertyName)
         {
             var existingColumn = Columns.FirstOrDefault(c => c.PropertyName.Equals(propertyName));
 
@@ -196,6 +248,30 @@ namespace Vtex.Practices.DataTransformation
             var message = string.Format("Invalid PropertyName: {0} does not correspond to any dto property", propertyName);
 
             throw new InvalidPropertyException(message);
+        }
+
+        private Column GetExistingColumn(int? index)
+        {
+            Column existingColumn = null;
+
+            if (index != null && Columns.Any() && Columns.Count > index)
+            {
+                existingColumn = Columns[index.Value];
+            }
+
+            return existingColumn;
+        }
+
+        private Column GetExistingColumn(string propertyName)
+        {
+            Column existingColumn = null;
+
+            if (!string.IsNullOrWhiteSpace(propertyName) && Columns.Any())
+            {
+                existingColumn = Columns.FirstOrDefault(column => column.PropertyName.Equals(propertyName));
+            }
+
+            return existingColumn;
         }
     }
 }

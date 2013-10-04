@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
@@ -27,9 +28,9 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .MapColumn("Name", "NewName1", CellType.STRING, ToUpperCase)
-                                .MapColumn("Name", ToUpperCase)
-                                .MapColumn(1, CommaToDashReplacer);
+                                .Map("Name", "NewName1", CellType.STRING, ToUpperCase)
+                                .Map("Name", ToUpperCase)
+                                .Map(1, CommaToDashReplacer);
 
             var properties = typeof(DummyDto).GetProperties();
 
@@ -37,7 +38,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void TestXlsCreationFromDtoCollection_AutoMap()
+        public void ShouldCreateXlsFileFromDtoCollection_AutoMap()
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
@@ -51,13 +52,13 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void TestXlsCreationFromDtoCollection_ManualMap()
+        public void ShouldCreateXlsFileFromDtoCollection_ManualMap()
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .MapColumn("Name", "NewName2", CellType.STRING, ToUpperCase)
-                                .MapColumn(1, value => value.ToString().Replace(',', '-'))
-                                .MapColumn(0, "NewColumnName");
+                                .Map("Name", "NewName2", CellType.STRING, ToUpperCase)
+                                .Map(1, value => value.ToString().Replace(',', '-'))
+                                .Map(0, "NewColumnName");
 
             var handler = columnMapper.DataHandler;
             var generatedData = GenerateData();
@@ -85,20 +86,20 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             const string filePath = @"C:\Temp\planilha_productEspec.xls";
 
-            var mapper = ColumnMapper<ProductsSpecificationByCategoryIdDto>.Factory
+            var mapper = ColumnMapper<CustomComplexDto>.Factory
                     .CreateNew(true)
-                    .MapColumn("ProductId", "IdProduto (não alterável)")
-                    .MapColumn("ProductName", "NomeProduto (não alterável)")
-                    .MapColumn("FieldId", "IdCampo (não alterável)")
-                    .MapColumn("FieldName", "NomeCampo (não alterável)")
-                    .MapColumn("FieldTypeName", "NomeTipoCampo (não alterável)")
-                    .MapColumn("FieldValueId", "IdCampoValor (não alterável)")
-                    .MapColumn("FieldValueName", "NomeCampoValor (não alterável)")
-                    .MapColumn("ProductFieldValueId", "CodigoEspecificaCao (não alterável)")
-                    .MapColumn("ProductFieldValueText", "ValorEspecificaCao")
-                    .MapColumn("ProductRefId", "CodigoReferencia (não alterável)");
+                    .Map("ProductId", "IdProduto (não alterável)")
+                    .Map("ProductName", "NomeProduto (não alterável)")
+                    .Map("FieldId", "IdCampo (não alterável)")
+                    .Map("FieldName", "NomeCampo (não alterável)")
+                    .Map("FieldTypeName", "NomeTipoCampo (não alterável)")
+                    .Map("FieldValueId", "IdCampoValor (não alterável)")
+                    .Map("FieldValueName", "NomeCampoValor (não alterável)")
+                    .Map("ProductFieldValueId", "CodigoEspecificaCao (não alterável)")
+                    .Map("ProductFieldValueText", "ValorEspecificaCao")
+                    .Map("ProductRefId", "CodigoReferencia (não alterável)");
 
-            var handler = new DataHandler<ProductsSpecificationByCategoryIdDto>(mapper);
+            var handler = new DataHandler<CustomComplexDto>(mapper);
 
             var result = handler.DecodeFileToDtoCollection(filePath);
 
@@ -134,7 +135,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn("InvalidPropertyName"));
+            Assert.Throws<InvalidPropertyException>(() => mapper.Map("InvalidPropertyName"));
         }
 
         [Test]
@@ -142,7 +143,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn("InvalidPropertyName", ToUpperCase));
+            Assert.Throws<InvalidPropertyException>(() => mapper.Map("InvalidPropertyName", ToUpperCase));
         }
 
         [Test]
@@ -156,7 +157,7 @@ namespace Vtex.Practices.DataTransformation.Tests
                 ListSeparator = "-"
             };
 
-            mapper.MapColumn(column);
+            mapper.Map(column);
 
             Assert.AreEqual(1, mapper.Columns.Count);
         }
@@ -170,7 +171,7 @@ namespace Vtex.Practices.DataTransformation.Tests
                 PropertyName = "Name"
             };
 
-            mapper.MapColumn(column);
+            mapper.Map(column);
 
             Assert.AreEqual(column.PropertyName, mapper.Columns[0].HeaderText);
         }
@@ -223,7 +224,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         public void ParameterTypeInferenceAndCustomTransformTest()
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
-            mapper.MapColumn("Name", ToUpperCase);
+            mapper.Map("Name", ToUpperCase);
 
             var mappedColumn = mapper.Columns.FirstOrDefault();
 
@@ -236,7 +237,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         public void ParameterTypeInferenceTest()
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
-            mapper.MapColumn("Name");
+            mapper.Map("Name");
 
             var mappedColumn = mapper.Columns.FirstOrDefault();
 
@@ -253,7 +254,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             //                            Func<object, object> customTranformationAction)
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
 
-            Assert.Throws<InvalidPropertyException>(() => mapper.MapColumn(1, "InvalidPropertyName", "", CellType.Unknown, null));
+            Assert.Throws<InvalidPropertyException>(() => mapper.Map(1, "InvalidPropertyName", "", CellType.Unknown, null));
         }
 
         [Test]
@@ -269,7 +270,51 @@ namespace Vtex.Practices.DataTransformation.Tests
             Assert.AreEqual(input2.Replace(",", "-"), output2);
         }
 
-        public List<DummyDto> GenerateData()
+        [Test]
+        public void ShouldMapOneColumnAndUnmapItByIndex()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+
+            mapper.Map("Id").Unmap(0);
+
+            Assert.AreEqual(mapper.Columns.Count, 0);
+        }
+
+        [Test]
+        public void ShouldMapOneColumnAndUnmapItByPropertyName()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+
+            const string propertyName = "Id";
+
+            mapper.Map(propertyName).Unmap(propertyName);
+
+            Assert.AreEqual(mapper.Columns.Count, 0);
+        }
+
+        [Test]
+        public void ShouldMapOneColumnAndUnmapItByIndexWithErrors()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+
+            mapper.Map("Id");
+
+            Assert.Throws<IndexOutOfRangeException>(() => mapper.Unmap(999));
+        }
+
+        [Test]
+        public void ShouldMapOneColumnAndUnmapItByPropertyNameWithErrors()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+
+            const string propertyName = "Id";
+
+            mapper.Map(propertyName);
+
+            Assert.Throws<InvalidPropertyException>(() => mapper.Unmap(null));
+        }
+
+        private static IEnumerable<DummyDto> GenerateData()
         {
             return DummyDtoFactory.GenerateData(500).ToList();
         }
@@ -285,7 +330,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
     }
 
-    public class ProductsSpecificationByCategoryIdDto
+    public class CustomComplexDto
     {
         public int? ProductId { get; set; }
         public string ProductName { get; set; }

@@ -34,7 +34,7 @@ namespace Vtex.Practices.DataTransformation
 
             CreateAndPopulateRows(sheet, data);
 
-            _mapper.Columns.ForEach(c => sheet.AutoSizeColumn(c.Index));
+            _mapper.Columns.ForEach(c => sheet.AutoSizeColumn(c.Index.GetValueOrDefault()));
 
             return Workbook;
         }
@@ -99,7 +99,7 @@ namespace Vtex.Practices.DataTransformation
         {
             var column = _mapper.Columns.First(c => c.PropertyName == property.Name);
 
-            var cell = row.GetCell(column.Index);
+            var cell = row.GetCell(column.Index.GetValueOrDefault());
 
             var columnType = column.Type;
 
@@ -209,7 +209,7 @@ namespace Vtex.Practices.DataTransformation
         {
             var header = sheet.CreateRow(0);
             _mapper.Columns.ForEach(column =>
-                                    header.CreateCell(column.Index, CellType.STRING)
+                                    header.CreateCell(column.Index.GetValueOrDefault(), CellType.STRING)
                                           .SetCellValue(column.HeaderText));
         }
 
@@ -221,7 +221,7 @@ namespace Vtex.Practices.DataTransformation
             {
                 var cellStyle = Workbook.CreateCellStyle();
                 cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
-                sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
                 cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
 
                 var cellType = c.IsNullable ? c.UnderLyingType : c.Type;
@@ -231,13 +231,13 @@ namespace Vtex.Practices.DataTransformation
                     case "DATETIME":
                         {
                             cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("dd/mm/yyyy");
-                            sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                            sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
                         }
                         break;
                     case "STRING":
                         {
                             cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
-                            sheet.SetDefaultColumnStyle(c.Index, cellStyle);
+                            sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
                         }
                         break;
                 }
@@ -257,8 +257,8 @@ namespace Vtex.Practices.DataTransformation
                             var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
 
                             var cell = column.CellType == CellType.Unknown
-                                ? row.CreateCell(column.Index)
-                                : row.CreateCell(column.Index, column.CellType.GetValueOrDefault(CellType.Unknown));
+                                ? row.CreateCell(column.Index.GetValueOrDefault())
+                                : row.CreateCell(column.Index.GetValueOrDefault(), column.CellType.GetValueOrDefault(CellType.Unknown));
 
                             SetCellValue(column, cell, cellValue);
                         });
@@ -290,9 +290,9 @@ namespace Vtex.Practices.DataTransformation
                 cellValue = string.Join(column.ListSeparator, values.Select(value => value.ToString()));
             }
 
-            if (column.CustomTransformAction != null)
+            if (column.CustomEncoder != null)
             {
-                cellValue = column.CustomTransformAction(cellValue);
+                cellValue = column.CustomEncoder(cellValue);
             }
 
             switch (columnType.Name)
