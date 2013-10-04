@@ -10,7 +10,7 @@ namespace Vtex.Practices.DataTransformation
 {
     public class ColumnMapper<T> : IColumnMapper<T> where T : new()
     {
-        private readonly List<PropertyInfo> _properties;
+        public List<PropertyInfo> Properties { get; private set; }
 
         public List<Column> Columns { get; private set; }
 
@@ -29,7 +29,7 @@ namespace Vtex.Practices.DataTransformation
 
         public ColumnMapper()
         {
-            _properties = typeof(T).GetProperties().ToList();
+            Properties = typeof(T).GetProperties().ToList();
 
             Columns = new List<Column>();
         }
@@ -64,28 +64,13 @@ namespace Vtex.Practices.DataTransformation
             return this;
         }
 
-        public IColumnMapper<T> Unmap(int index)
-        {
-            if (GetExistingColumn(index) != null)
-            {
-                Columns.RemoveAt(index);
-            }
-            else
-            {
-                var message = string.Format("Invalid property index: {0}. No property found at given index.", index);
-                throw new IndexOutOfRangeException(message);
-            }
-
-            return ReArrangeColumns();
-        }
-
         public IColumnMapper<T> Unmap(string propertyName)
         {
             var column = GetExistingColumn(propertyName);
 
             if (column != null)
             {
-                Unmap(Columns.IndexOf(column));
+                Columns.Remove(column);
             }
             else
             {
@@ -101,9 +86,7 @@ namespace Vtex.Practices.DataTransformation
 
         private IColumnMapper<T> ReArrangeColumns()
         {
-            var backup = Columns;
-            Columns.Clear();
-            Columns = backup.Select(column =>
+            Columns = Columns.Select(column =>
             {
                 column.Index = Columns.IndexOf(column);
                 return column;
@@ -111,15 +94,6 @@ namespace Vtex.Practices.DataTransformation
             return this;
         }
 
-        /// <summary>
-        /// Will add or overwrite column at given index
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="headerText"></param>
-        /// <param name="cellType"></param>
-        /// <param name="customTranformationAction"></param>
-        /// <returns></returns>
         public IColumnMapper<T> Map(int? index, string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction)
         {
             var newColumn = new Column
@@ -140,8 +114,7 @@ namespace Vtex.Practices.DataTransformation
             return this;
         }
 
-        public IColumnMapper<T> Map(string propertyName, string headerText, CellType cellType,
-                                          Func<object, object> customTranformationAction)
+        public IColumnMapper<T> Map(string propertyName, string headerText, CellType cellType, Func<object, object> customTranformationAction)
         {
             return Map(GetColumnIndex(propertyName), propertyName, headerText, cellType, customTranformationAction);
         }
@@ -196,9 +169,15 @@ namespace Vtex.Practices.DataTransformation
             return Map(propertyName, GetCellType(propertyName));
         }
 
+        public IColumnMapper<T> Map(IEnumerable<string> propertyNames)
+        {
+            propertyNames.ToList().ForEach(propertyName => Map(propertyName, GetCellType(propertyName)));
+            return this;
+        }
+
         public IColumnMapper<T> AutoMapColumns()
         {
-            _properties.ForEach(property =>
+            Properties.ForEach(property =>
                 Map(property.Name, GetCellType(property.PropertyType)));
 
             return this;
@@ -252,7 +231,7 @@ namespace Vtex.Practices.DataTransformation
 
         private CellType GetCellType(string propertyName)
         {
-            var property = _properties.FirstOrDefault(p => p.Name == propertyName);
+            var property = Properties.FirstOrDefault(p => p.Name == propertyName);
 
             if (property != null)
                 return GetCellType(property.PropertyType);

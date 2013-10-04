@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
@@ -250,8 +249,6 @@ namespace Vtex.Practices.DataTransformation.Tests
         [Test]
         public void InvalidColumnMappingWithComplexParameters()
         {
-            //MapColumn(int index, string propertyName, string headerText, CellType cellType,
-            //                            Func<object, object> customTranformationAction)
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
 
             Assert.Throws<InvalidPropertyException>(() => mapper.Map(1, "InvalidPropertyName", "", CellType.Unknown, null));
@@ -271,45 +268,23 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void ShouldMapOneColumnAndUnmapItByIndex()
+        public void ShouldMapTwoColumnAndUnmapTheFirstByPropertyName()
         {
-            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
+            var propertyNames = new[] { "Salary", "Id" };
 
-            mapper.Map("Id").Unmap(0);
+            var mapper = ColumnMapper<DummyDto>.Factory
+                .CreateNew()
+                .Map(propertyNames)
+                .Unmap(propertyNames[0]);
 
-            Assert.AreEqual(mapper.Columns.Count, 0);
+            Assert.AreEqual(mapper.Columns.Count, 1);
+            Assert.AreEqual(mapper.Columns[0].PropertyName, propertyNames[1]);
         }
 
         [Test]
-        public void ShouldMapOneColumnAndUnmapItByPropertyName()
+        public void ShouldUnmapNullPropertyNameWithErrors()
         {
-            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
-
-            const string propertyName = "Id";
-
-            mapper.Map(propertyName).Unmap(propertyName);
-
-            Assert.AreEqual(mapper.Columns.Count, 0);
-        }
-
-        [Test]
-        public void ShouldMapOneColumnAndUnmapItByIndexWithErrors()
-        {
-            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
-
-            mapper.Map("Id");
-
-            Assert.Throws<IndexOutOfRangeException>(() => mapper.Unmap(999));
-        }
-
-        [Test]
-        public void ShouldMapOneColumnAndUnmapItByPropertyNameWithErrors()
-        {
-            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
-
-            const string propertyName = "Id";
-
-            mapper.Map(propertyName);
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
             Assert.Throws<InvalidPropertyException>(() => mapper.Unmap(null));
         }

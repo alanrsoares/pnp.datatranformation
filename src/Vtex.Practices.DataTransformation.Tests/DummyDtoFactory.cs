@@ -6,7 +6,7 @@ namespace Vtex.Practices.DataTransformation.Tests
 {
     public static class DummyDtoFactory
     {
-        public static DummyDto NewDummyDto()
+        private static DummyDto NewDummyDto()
         {
             return new DummyDto
                 {
@@ -39,9 +39,11 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var newGuid = Guid.NewGuid();
             var guidNumber = Regex.Replace(newGuid.ToString(), @"[^\d]", "");
-            var rnd0 = new Random(Convert.ToInt32(guidNumber.Substring(0, 9)));
-            var rnd = new Random(rnd0.Next(5000));
-            return rnd;
+            var limit = guidNumber.Length >= 9 ? 9 : guidNumber.Length;
+            var guidNumbers = guidNumber.Substring(0, limit);
+            var rnd0 = new Random(Convert.ToInt32(guidNumbers));
+            var random = new Random(rnd0.Next(5000));
+            return random;
         }
 
         private static DateTime GetRandomDateTime()

@@ -21,6 +21,5 @@ namespace Vtex.Practices.DataTransformation
         IColumnMapper<T> Map(string propertyName, CellType cellType);
         IColumnMapper<T> Map(string propertyName);
         IColumnMapper<T> Unmap(string propertyName);
-        IColumnMapper<T> Unmap(int index);
     }
 }
