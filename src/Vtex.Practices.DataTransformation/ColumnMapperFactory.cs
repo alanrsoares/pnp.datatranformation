@@ -2,12 +2,12 @@
 {
     public class ColumnMapperFactory<T> where T : new()
     {
-        public ColumnMapper<T> CreateNew()
+        public IColumnMapper<T> CreateNew()
         {
             return new ColumnMapper<T>();
         }
 
-        public ColumnMapper<T> CreateNew(bool autoMap)
+        public IColumnMapper<T> CreateNew(bool autoMap)
         {
             var mapper = CreateNew();
 

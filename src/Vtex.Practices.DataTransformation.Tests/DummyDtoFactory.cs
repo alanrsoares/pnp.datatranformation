@@ -13,6 +13,7 @@ namespace Vtex.Practices.DataTransformation.Tests
                     Id = GetRandom(0, 100),
                     Name = GetRamdomName(),
                     BirthDate = GetRandomDateTime(),
+                    IsActive = GetRandom(1, 100) > 50,
                     Salary = new decimal(GetRandom(4000, 10000) + (GetRandom(1, 100) * .01)),
                     NullableIntegerValue = new int?[] { GetRandom(), null, null }[GetRandom(0, 2)],
                     NullableDateTimeValue = new DateTime?[] { GetRandomDateTime(), null, null }[GetRandom(0, 2)],

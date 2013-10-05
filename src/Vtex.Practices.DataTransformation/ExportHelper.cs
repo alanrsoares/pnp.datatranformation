@@ -6,7 +6,7 @@ namespace Vtex.Practices.DataTransformation
     {
         public static IFormatData Export<T>(IEnumerable<T> data) where T : new()
         {
-            IColumnMapper<T> mapper = ColumnMapper<T>.Factory.CreateNew();
+            var mapper = ColumnMapper<T>.Factory.CreateNew();
             mapper.AutoMapColumns();
             return new DataFormatter<T>(mapper, data);
         }

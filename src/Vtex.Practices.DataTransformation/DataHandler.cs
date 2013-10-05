@@ -118,16 +118,17 @@ namespace Vtex.Practices.DataTransformation
             {
                 var innerType = columnType.GetElementType() ?? columnType.GetGenericArguments()[0];
 
-                var splittedValues = cell.ToString().Split(';')
-                                                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                                                    .Select(value => value.Trim())
-                                                    .ToList();
-
-                if (!splittedValues.Any() || cell.CellType == CellType.BLANK)
+                if (cell == null || string.IsNullOrWhiteSpace(cell.ToString()) || cell.CellType == CellType.BLANK)
                 {
                     property.SetValue(dto, null);
                     return;
                 }
+
+                var splittedValues = cell.ToString().Split(';')
+                                                    .DefaultIfEmpty()
+                                                    .Where(value => value != null && !string.IsNullOrWhiteSpace(value))
+                                                    .Select(value => value.Trim())
+                                                    .ToList();
 
                 switch (innerType.Name)
                 {
@@ -164,13 +165,26 @@ namespace Vtex.Practices.DataTransformation
                     property.SetValue(dto, cell.NumericCellValue);
                     break;
                 case "Single":
-                    property.SetValue(dto, (float)cell.NumericCellValue);
+                    var floatValue = (Single)cell.NumericCellValue;
+                    property.SetValue(dto, floatValue);
                     break;
                 case "Decimal":
-                    property.SetValue(dto, (decimal)cell.NumericCellValue);
+                    var decimalValue = (Decimal)cell.NumericCellValue;
+                    property.SetValue(dto, decimalValue);
                     break;
                 case "Int32":
-                    property.SetValue(dto, (Int32)cell.NumericCellValue);
+                    var intValue = (Int32)cell.NumericCellValue;
+                    property.SetValue(dto, intValue);
+                    break;
+                case "Boolean":
+
+                    bool booleanValue;
+
+                    if (Boolean.TryParse(cell.ToString(), out booleanValue))
+                        property.SetValue(dto, booleanValue);
+                    else
+                        property.SetValue(dto, null);
+
                     break;
                 default:
                     property.SetValue(dto, (cell == null ? string.Empty : cell.ToString()));
@@ -248,23 +262,25 @@ namespace Vtex.Practices.DataTransformation
         private void CreateAndPopulateRows(ISheet sheet, IEnumerable<T> dataSet)
         {
             var rowNum = 1;
-            dataSet.ToList().ForEach(dto =>
+
+            foreach (var dto in dataSet)
+            {
+                var row = sheet.CreateRow(rowNum);
+
+                _mapper.Columns.ForEach(column =>
                 {
-                    var row = sheet.CreateRow(rowNum);
+                    var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
 
-                    _mapper.Columns.ForEach(column =>
-                        {
-                            var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
+                    var cell = column.CellType == CellType.Unknown
+                        ? row.CreateCell(column.Index.GetValueOrDefault())
+                        : row.CreateCell(column.Index.GetValueOrDefault(),
+                                         column.CellType.GetValueOrDefault(CellType.Unknown));
 
-                            var cell = column.CellType == CellType.Unknown
-                                ? row.CreateCell(column.Index.GetValueOrDefault())
-                                : row.CreateCell(column.Index.GetValueOrDefault(), column.CellType.GetValueOrDefault(CellType.Unknown));
-
-                            SetCellValue(column, cell, cellValue);
-                        });
-
-                    rowNum++;
+                    SetCellValue(column, cell, cellValue);
                 });
+
+                rowNum++;
+            }
         }
 
         private static void SetCellValue(Column column, ICell cell, object cellValue)

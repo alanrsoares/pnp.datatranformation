@@ -9,6 +9,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         public int Id { get; set; }
         public string Name { get; set; }
         public DateTime BirthDate { get; set; }
+        public bool IsActive { get; set; }
         public decimal? Salary { get; set; }
         public int? NullableIntegerValue { get; set; }
         public DateTime? NullableDateTimeValue { get; set; }

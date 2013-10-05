@@ -5,7 +5,7 @@ namespace Vtex.Practices.DataTransformation.ServiceModel
 {
     public class Column
     {
-        public int? Index { get; set; }
+        internal int? Index { get; set; }
         public string PropertyName { get; set; }
         public Type Type { get; set; }
         public CellType? CellType { get; set; }

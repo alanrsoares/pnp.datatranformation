@@ -28,8 +28,7 @@ namespace Vtex.Practices.DataTransformation.Tests
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
                                 .Map("Name", "NewName1", CellType.STRING, ToUpperCase)
-                                .Map("Name", ToUpperCase)
-                                .Map(1, CommaToDashReplacer);
+                                .Map("Name", ToUpperCase);
 
             var properties = typeof(DummyDto).GetProperties();
 
@@ -55,9 +54,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .Map("Name", "NewName2", CellType.STRING, ToUpperCase)
-                                .Map(1, value => value.ToString().Replace(',', '-'))
-                                .Map(0, "NewColumnName");
+                                .Map("Name", "NewName2", CellType.STRING, ToUpperCase);
 
             var handler = columnMapper.DataHandler;
             var generatedData = GenerateData();
@@ -69,7 +66,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         [Test]
         public void ShouldImportFileTest()
         {
-            const string filePath = @"C:\Temp\TestAutomap.xls";
+            const string filePath = @"C:\Temp\end2endtest.xls";
 
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
@@ -251,7 +248,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew();
 
-            Assert.Throws<InvalidPropertyException>(() => mapper.Map(1, "InvalidPropertyName", "", CellType.Unknown, null));
+            Assert.Throws<InvalidPropertyException>(() => mapper.Map("InvalidPropertyName"));
         }
 
         [Test]
@@ -286,7 +283,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            Assert.Throws<InvalidPropertyException>(() => mapper.Unmap(null));
+            Assert.Throws<InvalidPropertyException>(() => mapper.Unmap(string.Empty));
         }
 
         private static IEnumerable<DummyDto> GenerateData()
