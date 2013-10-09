@@ -10,7 +10,7 @@ namespace Vtex.Practices.DataTransformation
 {
     public class ColumnMapper<T> : IColumnMapper<T> where T : new()
     {
-        public List<PropertyInfo> Properties { get; private set; }
+        public IEnumerable<PropertyInfo> Properties { get; private set; }
 
         public List<Column> Columns { get; private set; }
 
@@ -24,7 +24,10 @@ namespace Vtex.Practices.DataTransformation
 
         public static ColumnMapperFactory<T> Factory
         {
-            get { return new ColumnMapperFactory<T>(); }
+            get
+            {
+                return new ColumnMapperFactory<T>();
+            }
         }
 
         public ColumnMapper()
@@ -36,7 +39,7 @@ namespace Vtex.Practices.DataTransformation
 
         public IColumnMapper<T> AutoMapColumns()
         {
-            Properties.ForEach(property => Map(property.Name));
+            Properties.ToList().ForEach(property => Map(property.Name));
 
             return this;
         }

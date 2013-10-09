@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using NPOI.SS.UserModel;
 using Vtex.Practices.DataTransformation.ServiceModel;
 
@@ -8,6 +9,8 @@ namespace Vtex.Practices.DataTransformation
     public interface IColumnMapper<T> where T : new()
     {
         List<Column> Columns { get; }
+
+        IEnumerable<PropertyInfo> Properties { get; }
 
         DataHandler<T> DataHandler { get; }
 

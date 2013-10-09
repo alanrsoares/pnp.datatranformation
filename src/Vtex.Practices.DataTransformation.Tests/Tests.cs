@@ -15,11 +15,11 @@ namespace Vtex.Practices.DataTransformation.Tests
         [Test]
         public void TestAutoMapper()
         {
-            var columnMapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
-            var properties = typeof(DummyDto).GetProperties();
+            var properties = mapper.Properties;
 
-            Assert.AreEqual(properties.Count(), columnMapper.Columns.Count);
+            Assert.AreEqual(properties.Count(), mapper.Columns.Count);
         }
 
         [Test]
