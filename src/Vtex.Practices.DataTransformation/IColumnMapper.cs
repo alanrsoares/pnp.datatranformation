@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using NPOI.SS.UserModel;
 using Vtex.Practices.DataTransformation.ServiceModel;
@@ -18,20 +19,34 @@ namespace Vtex.Practices.DataTransformation
 
         IColumnMapper<T> Map(Column column);
 
-        IColumnMapper<T> Map(string propertyName,
-            string headerText,
-            CellType cellType = CellType.Unknown,
-            Func<object, object> customEncoder = null,
-            Func<object, object> customDecoder = null);
+        IColumnMapper<T> Map(String propertyName,
+                             String headerText,
+                             bool isReadOnly = false,
+                             CellType cellType = CellType.Unknown,
+                             Func<object, object> customEncoder = null,
+                             Func<object, object> customDecoder = null);
 
-        IColumnMapper<T> Map(string propertyName,
-            Func<object, object> customEncoder = null,
-            Func<object, object> customDecoder = null);
+        IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property,
+                                        String headerText,
+                                        bool isReadOnly = false,
+                                        CellType cellType = CellType.Unknown,
+                                        Func<object, object> customEncoder = null,
+                                        Func<object, object> customDecoder = null);
 
-        IColumnMapper<T> Map(string propertyName, CellType cellType);
+        IColumnMapper<T> Map(String propertyName,
+                             Func<object, object> customEncoder = null,
+                             Func<object, object> customDecoder = null);
 
-        IColumnMapper<T> Map(IEnumerable<string> propertyNames);
+        IColumnMapper<T> Map(String propertyName, CellType cellType);
 
-        IColumnMapper<T> Unmap(string propertyName);
+        IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property, CellType cellType);
+
+        IColumnMapper<T> Map(IEnumerable<String> propertyNames);
+
+        IColumnMapper<T> Unmap(String propertyName);
+
+        IColumnMapper<T> Unmap(IEnumerable<String> propertyNames);
+
+        IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property);
     }
 }

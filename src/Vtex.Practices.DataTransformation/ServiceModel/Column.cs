@@ -10,14 +10,17 @@ namespace Vtex.Practices.DataTransformation.ServiceModel
         public Type Type { get; set; }
         public CellType? CellType { get; set; }
         public string HeaderText { get; set; }
+        public bool IsReadOnly { get; set; }
         public Func<object, object> CustomEncoder { get; set; }
         public Func<object, object> CustomDecoder { get; set; }
+
+        private Type _underlyingType;
 
         public Type UnderLyingType
         {
             get
             {
-                return Nullable.GetUnderlyingType(Type);
+                return _underlyingType ?? (_underlyingType = Nullable.GetUnderlyingType(Type));
             }
         }
 

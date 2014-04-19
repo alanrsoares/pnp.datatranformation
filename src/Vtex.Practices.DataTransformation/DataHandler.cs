@@ -7,10 +7,12 @@ using System.Reflection;
 using NPOI.HPSF;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
-using Vtex.Practices.DataTransformation.ServiceModel;
+
 
 namespace Vtex.Practices.DataTransformation
 {
+    using Column = ServiceModel.Column;
+
     public class DataHandler<T> where T : new()
     {
         private readonly IColumnMapper<T> _mapper;
@@ -26,17 +28,47 @@ namespace Vtex.Practices.DataTransformation
         {
             Workbook = InitializeWorkbook();
 
-            var sheet = Workbook.CreateSheet();
+            var index = 0;
+
+            const int maxSpreadsheetSize = 65535;
+
+            var dataItems = data as IList<T> ?? data.ToList();
+
+            var spreadSheet = GetPagedSpreadSheetData(dataItems, index, maxSpreadsheetSize);
+
+            while (spreadSheet.Any())
+            {
+                index++;
+
+                ProcessSpreadSheet(index, spreadSheet);
+
+                spreadSheet = GetPagedSpreadSheetData(dataItems, index, maxSpreadsheetSize);
+            }
+    
+            return Workbook;
+        }
+
+        private void ProcessSpreadSheet(int index, IEnumerable<T> spreadSheet)
+        {
+            var sheet = Workbook.CreateSheet("Sheet" + index);
+            
+            sheet.ProtectSheet(string.Empty);
 
             CreateAndPopulateHeader(sheet);
 
             SetColumnDefaults(sheet);
 
-            CreateAndPopulateRows(sheet, data);
+            CreateAndPopulateRows(sheet, spreadSheet);
 
             _mapper.Columns.ForEach(c => sheet.AutoSizeColumn(c.Index.GetValueOrDefault()));
+        }
 
-            return Workbook;
+        private static List<T> GetPagedSpreadSheetData(IEnumerable<T> dataItems, int index, int maxSpreadsheetSize)
+        {
+            return dataItems.Skip(index * maxSpreadsheetSize)
+                            .Take(maxSpreadsheetSize)
+                            .Where(a => ((object)a) != null)
+                            .ToList();
         }
 
         public Stream EncodeDataToStream(IEnumerable<T> data)
@@ -57,7 +89,7 @@ namespace Vtex.Practices.DataTransformation
         {
             List<T> result;
 
-            using (var file = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (var file = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, 4096, true))
             {
                 result = DecodeFileSteam(file).ToList();
             }
@@ -67,32 +99,52 @@ namespace Vtex.Practices.DataTransformation
 
         private IEnumerable<T> ConvertToDtoCollection()
         {
-            var sheet = Workbook.GetSheetAt(0);
-
             var result = new List<T>();
 
-            for (var i = 1; i <= sheet.LastRowNum; i++)
+            for (var index = 0; index < Workbook.NumberOfSheets; index++)
             {
-                var row = sheet.GetRow(i);
+                var sheet = Workbook.GetSheetAt(index);
 
-                var rowDto = ConvertRowToDto(row);
+                for (var i = 1; i <= sheet.LastRowNum; i++)
+                {
+                    var row = sheet.GetRow(i);
 
-                result.Add(rowDto);
+                    if (row == null || !HasCellValues(row)) continue;
+
+                    var rowDto = ConvertRowToDto(row);
+
+                    result.Add(rowDto);
+                }
             }
-
             return result;
+        }
+
+        private bool HasCellValues(IRow row)
+        {
+            return _mapper.Columns.Select(column =>
+                row.GetCell(column.Index.GetValueOrDefault()))
+                   .Any(cell => cell != null && !string.IsNullOrWhiteSpace(cell.ToString()) && !cell.CellType.Equals(CellType.BLANK));
         }
 
         private T ConvertRowToDto(IRow row)
         {
             var result = new T();
 
-            var properties = typeof(T).GetProperties().ToList();
+            var properties = Properties;
 
-            properties.ForEach(property =>
-                                SetPropertyValue(row, property, result));
+            properties.ForEach(property => SetPropertyValue(row, property, result));
 
             return result;
+        }
+
+        private List<PropertyInfo> _properties;
+
+        private List<PropertyInfo> Properties
+        {
+            get
+            {
+                return _properties ?? (_properties = typeof(T).GetProperties().ToList());
+            }
         }
 
         private void SetPropertyValue(IRow row, PropertyInfo property, T dto)
@@ -113,78 +165,41 @@ namespace Vtex.Practices.DataTransformation
 
                 columnType = column.UnderLyingType;
             }
+            else
+            {
+                if (cell == null || cell.CellType == CellType.BLANK)
+                {
+                    throw new Exception(string.Format("A coluna {0} da linha {1} não pode ser nula.", column.PropertyName, (row.RowNum + 1).ToString()));
+                }
+            }
 
             if (columnType.IsArray || columnType.GetGenericArguments().Any())
             {
-                var innerType = columnType.GetElementType() ?? columnType.GetGenericArguments()[0];
-
-                if (cell == null || string.IsNullOrWhiteSpace(cell.ToString()) || cell.CellType == CellType.BLANK)
-                {
-                    property.SetValue(dto, null);
-                    return;
-                }
-
-                var splittedValues = cell.ToString().Split(';')
-                                                    .DefaultIfEmpty()
-                                                    .Where(value => value != null && !string.IsNullOrWhiteSpace(value))
-                                                    .Select(value => value.Trim())
-                                                    .ToList();
-
-                switch (innerType.Name)
-                {
-                    case "Double":
-                        var doubles = splittedValues.Select(double.Parse);
-                        property.SetValue(dto, doubles.ToArray());
-                        break;
-                    case "Single":
-                        var floats = splittedValues.Select(float.Parse);
-                        property.SetValue(dto, floats.ToArray());
-                        break;
-                    case "Decimal":
-                        var decimals = splittedValues.Select(decimal.Parse);
-                        property.SetValue(dto, decimals.ToArray());
-                        break;
-                    case "Int32":
-                        var ints = splittedValues.Select(int.Parse);
-                        property.SetValue(dto, ints.ToArray());
-                        break;
-                    default:
-                        property.SetValue(dto, splittedValues.ToArray());
-                        break;
-                }
+                SetArrayPropertyValue(property, dto, columnType, cell);
 
                 return;
             }
 
+            SetNonArrayPropertyValue(property, dto, columnType, cell);
+        }
+
+        private static void SetNonArrayPropertyValue(PropertyInfo property, T dto, Type columnType, ICell cell)
+        {
             switch (columnType.Name)
             {
+                case "Double":
+                case "Single":
+                case "Decimal":
+                case "Int32":
+                    var cellValue = TryGetNumericCellValue(cell);
+                    var numericCellValue = Convert.ChangeType(cellValue, columnType);
+                    property.SetValue(dto, numericCellValue);
+                    break;
                 case "DateTime":
                     property.SetValue(dto, cell.DateCellValue);
                     break;
-                case "Double":
-                    property.SetValue(dto, cell.NumericCellValue);
-                    break;
-                case "Single":
-                    var floatValue = (Single)cell.NumericCellValue;
-                    property.SetValue(dto, floatValue);
-                    break;
-                case "Decimal":
-                    var decimalValue = (Decimal)cell.NumericCellValue;
-                    property.SetValue(dto, decimalValue);
-                    break;
-                case "Int32":
-                    var intValue = (Int32)cell.NumericCellValue;
-                    property.SetValue(dto, intValue);
-                    break;
                 case "Boolean":
-
-                    bool booleanValue;
-
-                    if (Boolean.TryParse(cell.ToString(), out booleanValue))
-                        property.SetValue(dto, booleanValue);
-                    else
-                        property.SetValue(dto, null);
-
+                    SetBooleanPropertyValue(property, dto, cell);
                     break;
                 default:
                     property.SetValue(dto, (cell == null ? string.Empty : cell.ToString()));
@@ -192,10 +207,77 @@ namespace Vtex.Practices.DataTransformation
             }
         }
 
+        private static Double TryGetNumericCellValue(ICell cell)
+        {
+            double numericCellValue;
+
+            try
+            {
+                numericCellValue = cell.NumericCellValue;
+            }
+            catch (Exception)
+            {
+                Double.TryParse(cell.StringCellValue, out numericCellValue);
+                if (numericCellValue.ToString() != cell.StringCellValue)
+                    throw new Exception(string.Format("Não foi possível transformar em numérico o valor de uma célula do tipo texto. Verifique se o valor da linha {0} coluna {1} está de acordo com o tipo da célula. Valor da celula: {2}", (cell.RowIndex + 1).ToString(), (cell.ColumnIndex + 1).ToString(), cell.StringCellValue));
+            }
+
+            return numericCellValue;
+        }
+
+        private static void SetArrayPropertyValue(PropertyInfo property, T dto, Type columnType, ICell cell)
+        {
+            var innerType = columnType.GetElementType() ?? columnType.GetGenericArguments()[0];
+
+            if (cell == null || string.IsNullOrWhiteSpace(cell.ToString()) || cell.CellType == CellType.BLANK)
+            {
+                property.SetValue(dto, null);
+                return;
+            }
+
+            var splittedValues = cell.ToString().Split(';')
+                .DefaultIfEmpty()
+                .Where(value => value != null && !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .ToList();
+
+            switch (innerType.Name)
+            {
+                case "Double":
+                    var doubles = splittedValues.Select(double.Parse);
+                    property.SetValue(dto, doubles.ToArray());
+                    break;
+                case "Single":
+                    var floats = splittedValues.Select(float.Parse);
+                    property.SetValue(dto, floats.ToArray());
+                    break;
+                case "Decimal":
+                    var decimals = splittedValues.Select(decimal.Parse);
+                    property.SetValue(dto, decimals.ToArray());
+                    break;
+                case "Int32":
+                    var ints = splittedValues.Select(int.Parse);
+                    property.SetValue(dto, ints.ToArray());
+                    break;
+                default:
+                    property.SetValue(dto, splittedValues.ToArray());
+                    break;
+            }
+        }
+
+        private static void SetBooleanPropertyValue(PropertyInfo property, T dto, ICell cell)
+        {
+            bool booleanValue;
+
+            if (Boolean.TryParse(cell.ToString(), out booleanValue))
+                property.SetValue(dto, booleanValue);
+            else
+                property.SetValue(dto, null);
+        }
+
         private static HSSFWorkbook InitializeWorkbook()
         {
             var workbook = new HSSFWorkbook();
-
             //create a entry of DocumentSummaryInformation
             var dsi = PropertySetFactory.CreateDocumentSummaryInformation();
 
@@ -213,10 +295,10 @@ namespace Vtex.Practices.DataTransformation
 
         public void WriteToFile(string filePath, HSSFWorkbook hssfworkbook)
         {
-            //Write the stream data of workbook to the root directory
-            var file = new FileStream(filePath, FileMode.Create);
-            hssfworkbook.Write(file);
-            file.Close();
+            using (var sourceStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+            {
+                hssfworkbook.Write(sourceStream);
+            }
         }
 
         private void CreateAndPopulateHeader(ISheet sheet)
@@ -234,6 +316,7 @@ namespace Vtex.Practices.DataTransformation
             _mapper.Columns.ForEach(c =>
             {
                 var cellStyle = Workbook.CreateCellStyle();
+                cellStyle.IsLocked = c.IsReadOnly;
                 cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
                 sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
                 cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("@");
@@ -254,22 +337,41 @@ namespace Vtex.Practices.DataTransformation
                             sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
                         }
                         break;
+                    case "DOUBLE":
+                    case "SINGLE":
+                    case "DECIMAL":
+                        {
+                            cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("0.000000");
+                            sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
+                        }
+                        break;
+                    case "INT32":
+                        {
+                            cellStyle.DataFormat = creationHelper.CreateDataFormat().GetFormat("0");
+                            sheet.SetDefaultColumnStyle(c.Index.GetValueOrDefault(), cellStyle);
+                        }
+                        break;
                 }
 
             });
         }
 
-        private void CreateAndPopulateRows(ISheet sheet, IEnumerable<T> dataSet)
+        private void CreateAndPopulateRows(ISheet sheet, IEnumerable<T> dataCollection)
         {
             var rowNum = 1;
 
-            foreach (var dto in dataSet)
+            var cachedProperties =
+                typeof(T).GetProperties()
+                    .Select(x => new { key = x.Name, value = x })
+                    .ToDictionary(x => x.key, x => x.value);
+
+            foreach (var dataItem in dataCollection)
             {
                 var row = sheet.CreateRow(rowNum);
 
                 _mapper.Columns.ForEach(column =>
                 {
-                    var cellValue = dto.GetType().GetProperty(column.PropertyName).GetValue(dto);
+                    var cellValue = cachedProperties[column.PropertyName].GetValue(dataItem);
 
                     var cell = column.CellType == CellType.Unknown
                         ? row.CreateCell(column.Index.GetValueOrDefault())
@@ -282,6 +384,7 @@ namespace Vtex.Practices.DataTransformation
                 rowNum++;
             }
         }
+
 
         private static void SetCellValue(Column column, ICell cell, object cellValue)
         {
@@ -317,14 +420,14 @@ namespace Vtex.Practices.DataTransformation
                     cell.SetCellValue((DateTime)cellValue);
                     break;
                 case "Single":
-                    cell.SetCellValue(cellValue.ToString() == "0" ? 0.0 : Convert.ToSingle(cellValue));
-                    break;
                 case "Decimal":
                 case "Double":
                     cell.SetCellValue(cellValue.ToString() == "0" ? 0.0 : Convert.ToDouble(cellValue));
+                    cell.SetCellType(CellType.NUMERIC);
                     break;
                 case "Int32":
                     cell.SetCellValue((int)cellValue);
+                    cell.SetCellType(CellType.NUMERIC);
                     break;
                 default:
                     cell.SetCellValue(cellValue == null ? string.Empty : cellValue.ToString());
