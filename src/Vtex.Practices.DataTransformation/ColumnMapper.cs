@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using NPOI.SS.UserModel;
 using Vtex.Practices.DataTransformation.Exceptions;
@@ -99,11 +100,8 @@ namespace Vtex.Practices.DataTransformation
             return this;
         }
 
-        public IColumnMapper<T> Map(string propertyName,
-                                    string headerText,
-                                    CellType cellType = CellType.Unknown,
-                                    Func<object, object> customEncoder = null,
-                                    Func<object, object> customDecoder = null)
+        public IColumnMapper<T> Map(string propertyName, string headerText, bool isReadOnly = false, CellType cellType = CellType.Unknown, 
+            Func<object, object> customEncoder = null, Func<object, object> customDecoder = null)
         {
             var column = new Column
             {
@@ -111,28 +109,49 @@ namespace Vtex.Practices.DataTransformation
                 HeaderText = headerText,
                 CellType = cellType,
                 CustomEncoder = customEncoder,
-                CustomDecoder = customDecoder
+                CustomDecoder = customDecoder,
+                IsReadOnly = isReadOnly
             };
             return Map(column);
+        }
+
+        public IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property, string headerText, bool isReadOnly = false, CellType cellType = CellType.Unknown,
+            Func<object, object> customEncoder = null, Func<object, object> customDecoder = null)
+        {
+            var propertyInfo = GetPropertyInfo(property);
+
+            return Map(propertyInfo.Name, headerText, isReadOnly, cellType, customEncoder, customDecoder);
         }
 
         public IColumnMapper<T> Map(string propertyName,
                                     CellType cellType)
         {
-            return Map(propertyName, propertyName, cellType);
+            return Map(propertyName, propertyName, false, cellType);
+        }
+
+        public IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property, CellType cellType)
+        {
+            var propertyInfo = GetPropertyInfo(property);
+            return Map(propertyInfo.Name, cellType);
         }
 
         public IColumnMapper<T> Map(string propertyName,
                                     Func<object, object> customEncoder = null,
                                     Func<object, object> customDecoder = null)
         {
-            return Map(propertyName, propertyName, CellType.Unknown, customEncoder, customDecoder);
+            return Map(propertyName, propertyName, false, CellType.Unknown, customEncoder, customDecoder);
         }
 
         public IColumnMapper<T> Map(IEnumerable<string> propertyNames)
         {
             propertyNames.ToList().ForEach(propertyName => Map(propertyName));
             return this;
+        }
+
+        public IColumnMapper<T> Map<TProperty>(Expression<Func<T, TProperty>> property)
+        {
+            var propertyInfo = GetPropertyInfo(property);
+            return Map(propertyInfo.Name);
         }
 
         public IColumnMapper<T> Unmap(string propertyName)
@@ -238,6 +257,26 @@ namespace Vtex.Practices.DataTransformation
             }
 
             return existingColumn;
+        }
+
+        private static PropertyInfo GetPropertyInfo<TSource, TProperty>(Expression<Func<TSource, TProperty>> propertyLambda)
+        {
+            var type = typeof(TSource);
+
+            var member = propertyLambda.Body as MemberExpression;
+
+            if (member == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a method, not a property.", propertyLambda));
+
+            var propInfo = member.Member as PropertyInfo;
+
+            if (propInfo == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a field, not a property.", propertyLambda));
+
+            if (type != propInfo.ReflectedType && !type.IsSubclassOf(propInfo.ReflectedType))
+                throw new ArgumentException(string.Format("Expresion '{0}' refers to a property that is not from type {1}.", propertyLambda, type));
+
+            return propInfo;
         }
     }
 }

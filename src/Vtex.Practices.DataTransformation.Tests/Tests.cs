@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using NPOI.SS.UserModel;
 using NUnit.Framework;
@@ -27,7 +30,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .Map("Name", "NewName1", CellType.STRING, ToUpperCase)
+                                .Map("Name", "NewName1", false, CellType.STRING, ToUpperCase)
                                 .Map("Name", ToUpperCase);
 
             var properties = typeof(DummyDto).GetProperties();
@@ -54,7 +57,7 @@ namespace Vtex.Practices.DataTransformation.Tests
         {
             var columnMapper = ColumnMapper<DummyDto>.Factory
                                 .CreateNew(true)
-                                .Map("Name", "NewName2", CellType.STRING, ToUpperCase);
+                                .Map("Name", "NewName2", false, CellType.STRING, ToUpperCase);
 
             var handler = columnMapper.DataHandler;
             var generatedData = GenerateData();
@@ -95,29 +98,65 @@ namespace Vtex.Practices.DataTransformation.Tests
                     .Map("ProductFieldValueText", "ValorEspecificaCao")
                     .Map("ProductRefId", "CodigoReferencia (não alterável)");
 
-            var handler = new DataHandler<CustomComplexDto>(mapper);
+            var handler = mapper.DataHandler;
 
-            var result = handler.DecodeFileToDtoCollection(filePath);
 
+            IEnumerable<CustomComplexDto> result;
+
+            using (var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, 4096, true))
+            {
+                result = handler.DecodeFileSteam(sourceStream);
+            }
+
+            Assert.IsNotNull(handler.Workbook);
             Assert.IsNotNull(result);
         }
 
         [Test]
         public void ShouldPerformEndToEndTest()
         {
+            Console.WriteLine("\nStarting EndToEndTest at {0}", DateTime.Now);
+
             const string filePath = @"C:\Temp\end2endtest.xls";
 
-            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew().AutoMapColumns();
 
             var handler = mapper.DataHandler;
 
-            var expectedData = GenerateData();
+            const int dataLength = 1000;
+
+            Console.WriteLine("Generating {0} sample DummyDtos", dataLength);
+
+            var timer = new Stopwatch();
+
+            timer.Start();
+
+            var expectedData = GenerateData(dataLength);
+
+            Console.WriteLine("Generated {0} sample DummyDtos in {1}m {2}s {3}ms",
+                dataLength, timer.Elapsed.Minutes, timer.Elapsed.Seconds, timer.Elapsed.Milliseconds);
+
+            Console.WriteLine("Starting data enconding at {0}", DateTime.Now);
+
+            timer.Restart();
 
             var workBook = handler.EncodeDataToWorkbook(expectedData);
 
+            Console.WriteLine("Encoded {0} sample DummyDtos in {1}m {2}s {3}ms",
+                dataLength, timer.Elapsed.Minutes, timer.Elapsed.Seconds, timer.Elapsed.Milliseconds);
+
+            Console.WriteLine("Writing econded workbook to path: {0}", filePath);
+
             handler.WriteToFile(filePath, workBook);
 
+            Console.WriteLine("Starting data decoding at {0}", DateTime.Now);
+
+            timer.Restart();
+
             var result = handler.DecodeFileToDtoCollection(filePath);
+
+            Console.WriteLine("Decoded {0} sample DummyDtos in {1}m {2}s {3}ms",
+                dataLength, timer.Elapsed.Minutes, timer.Elapsed.Seconds, timer.Elapsed.Milliseconds);
 
             var serializedResult = JsonConvert.SerializeObject(result);
 
@@ -279,16 +318,75 @@ namespace Vtex.Practices.DataTransformation.Tests
         }
 
         [Test]
-        public void ShouldUnmapNullPropertyNameWithErrors()
+        public void ShouldUnmapEmptyNameWithErrors()
         {
             var mapper = ColumnMapper<DummyDto>.Factory.CreateNew(true);
 
             Assert.Throws<InvalidPropertyException>(() => mapper.Unmap(string.Empty));
         }
 
-        private static IEnumerable<DummyDto> GenerateData()
+        [Test]
+        public void ShouldUnmapMultipleProperties()
         {
-            return DummyDtoFactory.GenerateData(500).ToList();
+            var propertyNames = new[] { "Salary", "Id" };
+
+            var mapper = ColumnMapper<DummyDto>.Factory
+                .CreateNew()
+                .Map(propertyNames)
+                .Unmap(propertyNames);
+
+            Assert.AreEqual(mapper.Columns.Count, 0);
+        }
+
+        [Test]
+        public void ShouldMapColumnsUsingLambdaExpression()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew()
+                            .Map(x => x.Name)
+                            .Map(x => x.Id)
+                            .Map(x => x.Salary);
+
+            Assert.AreEqual(mapper.Columns.Count, 3);
+        }
+
+        [Test]
+        public void ShouldMapColumnsWithArbitraryCellTypeUsingLambdaExpression()
+        {
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew()
+                            .Map(x => x.Name, CellType.STRING)
+                            .Map(x => x.Id, CellType.STRING)
+                            .Map(x => x.Salary, CellType.STRING);
+
+            Assert.AreEqual(mapper.Columns.Count, 3);
+            Assert.AreEqual(mapper.Columns[0].CellType, CellType.STRING);
+            Assert.AreEqual(mapper.Columns[1].CellType, CellType.STRING);
+            Assert.AreEqual(mapper.Columns[2].CellType, CellType.STRING);
+        }
+
+        [Test]
+        public void ShouldExportWithReadOnlyColumn()
+        {
+            const string filePath = @"C:\Temp\readonly.xls";
+
+            var mapper = ColumnMapper<DummyDto>.Factory.CreateNew()
+                            .Map(x => x.Name, "Name (ReadOnly)", true)
+                            .Map(x => x.Id, "Id")
+                            .Map(x => x.Salary, "Salary");
+            var handler = mapper.DataHandler;
+
+            var expected = GenerateData(30);
+
+            var wb = handler.EncodeDataToWorkbook(expected);
+
+            handler.WriteToFile(filePath, wb);
+
+            Assert.IsNotNull(wb);
+        }
+
+
+        private static IEnumerable<DummyDto> GenerateData(int length = 500)
+        {
+            return DummyDtoFactory.GenerateData(length).ToList();
         }
 
         private static object ToUpperCase(object value)
